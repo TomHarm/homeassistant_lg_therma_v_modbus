@@ -1,0 +1,15 @@
+No., mode (set coil1 set register2 transparent3), JSON name, slave address, register address, coil on1 or off0, number of register bytes, big-endin and little-endin (0 is big)
+1,0,Heatpump": 1,1,0,1,1,0,0
+2,0,Heatpump": 0,1,0,0,1,0,0
+3,1,TargetTempCirc1":,1,2,0,2,0,0
+4,1,MasterTemp":,1,2,0,2,0,0
+5,1,TargetDHW":,1,8,0,2,0,0
+6,1,OperationMode":,1,0,0,2,0,0
+7,1,ShiftValue":,1,4,0,2,0,0
+8,0,DHW": 1,1,1,1,1,0,0
+9,0,DHW": 0,1,1,0,1,0,0
+10,0,SilentMode": 1,1,2,1,1,0,0
+11,0,SilentMode": 0,1,2,0,1,0,0
+12,1,ControlMode":,1,1,0,2,0,0
+13,1,EnergyState":,1,9,0,2,0,0
+14,1,CompressorModulation":,1,23,0,2,0,0

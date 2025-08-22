@@ -1,0 +1,1995 @@
+# Home Assistant LG Heatpump integration
+# last update: 2025-07-30
+# Bauer Harmes with MQTT integration of the sensors
+
+mqtt:
+  #------------------------------------------
+  sensor:
+    # Technische Daten
+    # Input Register
+    #------------------------------------------
+
+    - name: "hp_error_code"
+      unique_id: "mqtt.hp_error_code"
+      state_topic: LG_Heatpump
+      value_template: "{{value_json['Reading Values']['Error Code'] if value_json is defined else 0}}"
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Error Code']>=0 %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_odu_operation_cycle"
+      unique_id: "mqtt.hp_odu_operation_cycle"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set last = states('sensor.mqtt.hp_odu_operation_cycle') | int(0) %}
+        {{value_json['Reading Values']['ODU Operation Cycle'] if value_json is defined else last}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['ODU Operation Cycle']>=0 %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_inlet_temp"
+      unique_id: "mqtt.hp_inlet_temp"
+      unit_of_measurement: °C
+      device_class: temperature
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set last = states('sensor.mqtt.hp_inlet_temp') | int(0) %}
+        {% set temp = value_json['Reading Values']['Water Inlet Temp'] if value_json is defined else last %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Water Inlet Temp']>=0 %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_outlet_temp"
+      unique_id: "mqtt.hp_outlet_temp"
+      unit_of_measurement: °C
+      device_class: temperature
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set last = states('sensor.mqtt.hp_outlet_temp') | int(0) %}
+        {% set temp = value_json['Reading Values']['Water Outlet Temp'] if value_json is defined else last %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Water Outlet Temp']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_backup_heater_outlet_temp"
+      unique_id: "mqtt.hp_backup_heater_outlet_temp"
+      unit_of_measurement: °C
+      device_class: temperature
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Outlet Temp Backup Heater'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Outlet Temp Backup Heater'] |is_number%}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_dhw_water_temp"
+      unique_id: "mqtt.hp_dhw_water_temp"
+      unit_of_measurement: °C
+      device_class: temperature
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['DHW Temperature'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['DHW Temperature'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    #     - name: "hp_solar_collector_temp"
+    #       unique_id: "mqtt.hp_solar_collector_temp"
+    #       scale: 0.1
+    #       precision: 1
+    #       scan_interval: 30
+    #       address: 6 # reg 7
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       unit_of_measurement: °C
+    #       device_class: temperature
+    #       input_type: input
+
+    - name: "hp_temp_technikraum" # Temperatur Technikraum
+      unique_id: "mqtt.hp_temp_technikraum"
+      device_class: temperature
+      unit_of_measurement: "°C"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Room Temp Circ 1'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Room Temp Circ 1'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_flow_rate"
+      unique_id: "mqtt.hp_flow_rate"
+      device_class: volume_flow_rate
+      unit_of_measurement: "L/min"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['FlowRate'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {% set output = 0 if output <= 5 else output %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['FlowRate'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    #     - name: "hp_flow_temp_circle_2"
+    #       unique_id: "mqtt.hp_flow_temp_circle_2"
+    #       scale: 0.1
+    #       precision: 1
+    #       scan_interval: 10
+    #       address: 9 # reg 10
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       device_class: temperature
+    #       unit_of_measurement: °C
+    #       input_type: input
+
+    #     - name: "hp_room_air_temp_circuit2_input"
+    #       unique_id: "mqtt.hp_room_air_temp_circuit2_input"
+    #       precision: 1
+    #       scan_interval: 10
+    #       address: 10 # reg 11
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       scale: 0.1
+    #       device_class: temperature
+    #       unit_of_measurement: "°C"
+    #       input_type: input
+
+    - name: "hp_energy_state_input"
+      unique_id: "mqtt.hp_energy_state_input"
+      state_topic: LG_Heatpump
+      value_template: "{{value_json['Reading Values']['Energy State'] if value_json is defined else 0}}"
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Energy State'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_outside_temp" # Außentemperatur
+      unique_id: "mqtt.hp_outside_temp"
+      device_class: temperature
+      unit_of_measurement: "°C"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Outdoor Temperature'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Outdoor Temperature'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_water_pressure" # Wasserdruck Aussengeraet
+      unique_id: "mqtt.hp_water_pressure"
+      device_class: pressure
+      unit_of_measurement: bar
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Water Pressure'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Water Pressure'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_temp_liquid_gas" # Temperatur Flüssiggas
+      unique_id: "mqtt.hp_temp_liquid_gas"
+      device_class: temperature
+      unit_of_measurement: °C
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Temperature Liquid Gas'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Temperature Liquid Gas'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_temp_suction" # Temperatur Absaugung
+      unique_id: "mqtt.hp_temp_suction"
+      device_class: temperature
+      unit_of_measurement: °C
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Temperature Suction'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Temperature Suction'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_temp_heatgas" # Heißgastemperatur
+      unique_id: "hp_mqtt.temp_heatgas"
+      device_class: temperature
+      unit_of_measurement: °C
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Heat Gas Temperature'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Heat Gas Temperature'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_temp_before_vaporiser" # Dampftemperatur vor Verdampfer
+      unique_id: "mqtt.hp_temp_before_vaporiser"
+      device_class: temperature
+      unit_of_measurement: "°C"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Steam Temp pre Condensator'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Steam Temp pre Condensator'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_temp_after_vaporiser" # Dampftemperatur nach Verdampfer
+      unique_id: "mqtt.hp_temp_after_vaporiser"
+      device_class: temperature
+      unit_of_measurement: "°C"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Steam Temp post Condensator'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Steam Temp post Condensator'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_high_pressure" # Dampfdruck Kondensator
+      unique_id: "hp_mqtt.high_pressure"
+      device_class: pressure
+      unit_of_measurement: bar
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Steam Pressure pre Condensator'] if value_json is defined else 0 %}
+        {% set output = temp / 100.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Steam Pressure pre Condensator'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_low_pressure" # Dampfdruck Verdampfer
+      unique_id: "mqtt.hp_low_pressure"
+      device_class: pressure
+      unit_of_measurement: bar
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Steam Pressure post Condensator'] if value_json is defined else 0 %}
+        {% set output = temp / 100.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Steam Pressure post Condensator'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    #     - name: "hp_compressor_rpm" # Kompressordrehzahl
+    #       unique_id: "mqtt.hp_compressor_rpm"
+    #       scale: 60
+    #       precision: 0.1
+    #       scan_interval: 10
+    #       address: 24
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       unit_of_measurement: U/min
+    #       input_type: input
+
+    - name: "hp_energy_instantaneous_total" #
+      unique_id: "mqtt.hp_energy_instantaneous_total"
+      unit_of_measurement: kW
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['ENERGY_INSTANTANEOUS_TOTAL'] if value_json is defined else 0 %}
+        {% set output = temp / 1000.0 | float(3) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['ENERGY_INSTANTANEOUS_TOTAL'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_energy_accumulative_total" #
+      unique_id: "mqtt.hp_energy_accumulative_total"
+      unit_of_measurement: kW
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['ENERGY_ACCUMULATIVE_TOTAL'] if value_json is defined else 0 %}
+        {% set output = temp / 1000.0 | float(3) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['ENERGY_ACCUMULATIVE_TOTAL'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_energy_instantaneous_heat" #
+      unique_id: "mqtt.hp_energy_instantaneous_heat"
+      unit_of_measurement: kW
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['ENERGY_INSTANTANEOUS_HEAT'] if value_json is defined else 0 %}
+        {% set output = temp / 1000.0 | float(3) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['ENERGY_INSTANTANEOUS_HEAT'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_energy_accumulative_cool" #
+      unique_id: "mqtt.hp_energy_accumulative_cool"
+      unit_of_measurement: kW
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['ENERGY_ACCUMULATIVE_COOL'] if value_json is defined else 0 %}
+        {% set output = temp / 1000.0 | float(3) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['ENERGY_ACCUMULATIVE_COOL'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_energy_accumulative_dhw" #
+      unique_id: "mqtt.hp_energy_accumulative_dhw"
+      unit_of_measurement: kW
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['ENERGY_ACCUMULATIVE_DHW'] if value_json is defined else 0 %}
+        {% set output = temp / 1000.0 | float(3) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['ENERGY_ACCUMULATIVE_DHW'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+    #     - name: "hp_product_info" # Produktinfos
+    #       unique_id: "mqtt.hp_product_info"
+    #       scan_interval: 60
+    #       address: 9998
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       input_type: input
+
+    #     # Holding Register
+    #     #------------------------------------------
+
+    - name: "hp_operation_mode"
+      unique_id: "mqtt.hp_operation_mode"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['Holding Values']['Operation Mode'] if value_json is defined else 0 %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Operation Mode'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_control_method"
+      unique_id: "mqtt.hp_control_method"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['Holding Values']['Control Mode'] if value_json is defined else 0 %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Control Mode'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_target_temp_circuit1" #Zieltemperatur HK1 (Heizkörper)
+      unique_id: "mqtt.hp_target_temp_circuit1"
+      device_class: temperature
+      unit_of_measurement: °C
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Holding Values']['Target Temperature'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Target Temperature'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_room_air_temp_circuit1"
+      unique_id: "mqtt.hp_room_air_temp_circuit1"
+      device_class: temperature
+      unit_of_measurement: "°C"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Holding Values']['Target Room Temperature'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Target Room Temperature'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_shift_value_in_auto_mode_circuit1"
+      unique_id: "mqtt.hp_shift_value_in_auto_mode_circuit1"
+      unit_of_measurement: °C
+      device_class: temperature
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Holding Values']['Temperature Variation'] if value_json is defined else 0 %}
+        {% set output = temp / 1.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Temperature Variation'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    #     - name: "hp_target_temp_circuit2" #Zieltemperatur HK2 (Fußbodenheizung)
+    #       unique_id: "mqtt.hp_target_temp_circuit2"
+    #       scale: 0.1
+    #       precision: 1
+    #       scan_interval: 30
+    #       address: 5
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       unit_of_measurement: °C
+    #       input_type: holding
+
+    #     - name: "hp_room_air_temp_circuit2"
+    #       unique_id: "mqtt.hp_room_air_temp_circuit2"
+    #       scale: 0.1
+    #       precision: 1
+    #       scan_interval: 30
+    #       address: 6 # reg 7
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       unit_of_measurement: "°C"
+    #       input_type: holding
+
+    #     - name: "hp_shift_value_in_auto_mode_circuit2" #Sollwertverschiebung HK2 (Fußbodenheizung)
+    #       unique_id: "mqtt.hp_shift_value_in_auto_mode_circuit2"
+    #       precision: 1 #test
+    #       scan_interval: 30
+    #       address: 7
+    #       #data_type: int16
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       unit_of_measurement: °C
+    #       input_type: holding
+
+    - name: "hp_dhw_target_temp" #DHW Zieltemperatur
+      unique_id: "mqtt.hp_dhw_target_temp"
+      unit_of_measurement: °C
+      device_class: temperature
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Holding Values']['DHW Target Temperature'] if value_json is defined else 0 %}
+        {% set output = temp / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['DHW Target Temperature'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_energy_state_input_raw"
+      unique_id: "mqtt.hp_energy_state_input_raw"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['Holding Values']['Energy Control Mode'] if value_json is defined else 0 %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Energy Control Mode'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_compressor_modulation"
+      unique_id: "mqtt.hp_compressor_modulation"
+      state_topic: LG_Heatpump
+      state_class: measurement
+      unit_of_measurement: "%"
+      value_template: >
+        {% set output = value_json['Holding Values']['Compressor Modulation'] if value_json is defined else 0 %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Compressor Modulation'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+  # -------------------------------------------------
+  switch:
+    # coil_register (binäre Daten, nur schreiben)
+    # -------------------------------------------------
+    - name: "hp_hauptschalter" # Wärmepumpe an/aus
+      unique_id: "mqtt.hp_hauptschalter"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['Coils']['Heatpump Operation'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Coils']['Heatpump Operation'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      command_topic: LG_HP_Sub
+      command_template: '{"Heatpump": {{ value }}}'
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_dhw" # Warmwasserbereitung an/aus
+      unique_id: "mqtt.hp_dhw"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['Coils']['DHW Operation'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Coils']['DHW Operation'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      command_topic: LG_HP_Sub
+      command_template: '{"DHW": {{ value }}}'
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_silent_mode" # Ruhemodus an/aus
+      unique_id: "mqtt.hp_silent_mode"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['Coils']['Silent Mode Setting'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Coils']['Silent Mode Setting'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      command_topic: LG_HP_Sub
+      command_template: '{"SilentMode": {{ value }}}'
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+  # - name: "hp_dhw_desinfection_mode" # Desinfektionsmodus an/aus
+  #   unique_id: "mqtt.hp_dhw_desinfection_mode"
+  #   slave: !secret lg_heatpump_modbus_slave
+  #   address: 3
+  #   write_type: coil
+  #   command_on: 1
+  #   command_off: 0
+  #   verify:
+  #     input_type: coil
+  #     address: 3
+  #     state_on: 1
+  #     state_off: 0
+
+  # -----------------------------------------
+  binary_sensor:
+    # discrete_input (binäre Daten, nur lesen)
+    # -----------------------------------------
+    - name: "hp_water_flow_status"
+      unique_id: "mqtt.hp_water_flow_status"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Waterflow'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Waterflow']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_water_pump_status"
+      unique_id: "mqtt.hp_water_pump_status"
+      device_class: moisture
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Waterpump'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Waterpump']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_ext_water_pump_status"
+      unique_id: "mqtt.hp_ext_water_pump_status"
+      device_class: moisture
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Ext Pump'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Ext Pump']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_compressor_status"
+      unique_id: "mqtt.hp_compressor_status"
+      device_class: power
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Compressor'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Compressor']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_defrosting_status"
+      unique_id: "mqtt.hp_defrosting_status"
+      device_class: cold
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Defrosting'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Defrosting']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_dhw_heating_status"
+      unique_id: "mqtt.hp_dhw_heating_status"
+      device_class: heat
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['DHW Heating'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['DHW Heating']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_dhw_tank_desinfection_status"
+      unique_id: "mqtt.hp_dhw_tank_desinfection_status"
+      device_class: heat
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Desinfection DHW'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Desinfection DHW']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_silent_mode_status"
+      unique_id: "mqtt.hp_silent_mode_status"
+      device_class: sound
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Silent Mode'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Silent Mode']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_cooling_status"
+      unique_id: "mqtt.hp_cooling_status"
+      device_class: cold
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Cooling'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Cooling']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    #     - name: "hp_solar_pump_status"
+    #       unique_id: "mqtt.hp_solar_pump_status"
+    #       scan_interval: 30
+    #       address: 9  # register #10
+    #       slave: !secret lg_heatpump_modbus_slave
+    #       input_type: discrete_input
+
+    - name: "hp_backup_heater_step1_status"
+      unique_id: "mqtt.hp_backup_heater_step1_status"
+      device_class: heat
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Backup Heater Stage 1'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Backup Heater Stage 1']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_backup_heater_step2_status"
+      unique_id: "mqtt.hp_backup_heater_step2_status"
+      device_class: heat
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Backup Heater Stage 2'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Backup Heater Stage 2']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_dhw_boost_heater_status"
+      unique_id: "mqtt.hp_dhw_boost_heater_status"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['DHW Backup Heater'] if value_json is defined else 0 %}
+        {{ "on" if output == 1 else "off" }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['DHW Backup Heater']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_error_status"
+      unique_id: "mqtt.hp_error_status"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Error'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Error']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_emergency_operation_available_space_heating/cooling"
+      unique_id: "mqtt.hp_emergency_operation_available_space_heating_cooling"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['Emergency Operation'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['Emergency Operation']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_emergency_operation_available_dhw"
+      unique_id: "mqtt.hp_emergency_operation_available_dhw"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['States']['DHW Emergency Operation'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['States']['DHW Emergency Operation']|is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+#     - name: "hp_mix_pump_status"
+#       unique_id: "mqtt.hp_mix_pump_status"
+#       scan_interval: 30
+#       address: 16
+#       slave: !secret lg_heatpump_modbus_slave
+#       input_type: discrete_input
+
+input_number:
+  # Input Number
+  # -----------------------------------------
+  hp_shift_value_in_auto_mode_circuit1:
+    name: "Set HP Sollwertverschiebung im AI Modus - HK1 (Heizkörper)"
+    min: -5
+    max: 5
+    step: 1
+
+  #   hp_shift_value_in_auto_mode_circuit2:
+  #     name: "Set HP Sollwertverschiebung im AI Modus - HK2 (Fußbodenheizung)"
+  #     min: -5
+  #     max: 5
+  #     step: 1
+
+  hp_hk1_target_temperatur:
+    name: "Soll Temperatur HK1 #Zieltemperatur HK1 Heizkörper"
+    min: 25
+    max: 45
+    step: 1
+
+  #   hp_hk2_target_temperatur:
+  #     name: "Soll Temperatur HK2 #Zieltemperatur HK2Fußbodenheizung"
+  #     min: 20
+  #     max: 40
+  #     step: 1
+
+  hp_dhw_target_temperatur:
+    name: "Soll Temperatur DHW"
+    min: 40
+    max: 55
+    step: 1
+
+    # Setting to reduce compressor modulation after run up phase.
+  hp_compressor_modulation:
+    name: "Compressor Modulation setting"
+    min: 40
+    max: 100
+    step: 1
+
+input_select:
+  # Input Select
+  # -----------------------------------------
+  hp_compressor_modulation_mode:
+    name: "Selector compressor modulation"
+    options:
+      - "freie Modulation"
+      - "Modulation begrenzt"
+
+  hp_set_operation_mode:
+    name: "Selector Heatpump Operation Mode"
+    options:
+      - "Kühlen"
+      - "Heizen"
+      - "Auto"
+
+  hp_set_control_method:
+    name: "Selector Heatpump Control Method"
+    options:
+      - "Wasserauslasstemp. Steuerung"
+      - "Wassereinlasstemp. Steuerung"
+      - "Raumluftsteuerung"
+
+  hp_set_energy_state:
+    name: "Selector Heatpump energy state"
+    options:
+      - "Nicht verwenden"
+      - "Erzwungen aus"
+      - "Normalbetrieb"
+      - "Ein-Empfehlung"
+      - "Ein Befehl"
+      - "Ein Befehl Schritt 2"
+      - "Ein Empfehlung Schritt 1"
+      - "Energiesparmodus"
+      - "Superenergiesparmodus"
+
+template:
+  # Template sensors for better readability
+  #-----------------------------------------
+  - binary_sensor:
+      - name: "HP Energy State - Nicht verwenden"
+        unique_id: hp_energy_state_nicht_verwenden"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 0 }}
+
+      - name: "HP Energy State - Erzwungen Aus"
+        unique_id: hp_energy_state_erzwungen_aus"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 1 }}
+
+      - name: "HP Energy State - Normalbetrieb"
+        unique_id: hp_energy_state_normalbetrieb"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 2 }}
+
+      - name: "HP Energy State - Ein-Empfehlung"
+        unique_id: hp_energy_state_ein_empfehlung"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 3 }}
+
+      - name: "HP Energy State - Ein-Befehl"
+        unique_id: "hp_energy_state_ein_befehl"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 4 }}
+
+      - name: "HP Energy State - Ein-Befehl Schritt 2"
+        unique_id: hp_energy_state_ein_befehl_schritt_2"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 5 }}
+
+      - name: "HP Energy State - Ein-Empfehlung Schritt 1"
+        unique_id: hp_energy_state_ein_empfehlung_befehl_schritt_1"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 6 }}
+
+      - name: "HP Energy State - Energiesparmodus"
+        unique_id: hp_energy_state_ein_energiesparmodus"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 7 }}
+
+      - name: "HP Energy State - Superenergiesparmodus"
+        unique_id: hp_energy_state_ein_superenergiesparmodus"
+        state: >
+          {{ states('sensor.lg_therma_v_hp_energy_state_input_raw')|int(default=0) == 8 }}
+
+  - sensor:
+      - name: "hp Außengerät Delta T"
+        unique_id: "hp_aussengeraet_delta_t"
+        state: >
+          {% set inlet = states('sensor.lg_therma_v_hp_inlet_temp') | float(0) %}
+          {% set outlet = states('sensor.lg_therma_v_hp_outlet_temp') | float(0) %}
+          {{ outlet-inlet| round(1) }}
+        unit_of_measurement: °C
+        device_class: temperature
+    # calculate the current power of the heat pump as the internal sensors are telling crap the whole time
+  - sensor:
+      - name: "hp current power"
+        unique_id: "hp_current_power"
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set vorlauf = states('sensor.lg_therma_v_hp_outlet_temp') | float(0)-1.5 %}
+          {% set ruecklauf = states('sensor.lg_therma_v_hp_inlet_temp') | float(0) %}
+          {% set durchfluss = states('sensor.lg_therma_v_hp_flow_rate') | float(0) %}
+          {% set waermekapazitaet = 1.163 %}
+
+          {% if vorlauf > 0 and ruecklauf > 0 and durchfluss > 0 %}
+            {% set durchfluss_kg_h = durchfluss * 60 %}
+            {% set delta_t = vorlauf - ruecklauf %}
+            
+            {{ (durchfluss_kg_h * waermekapazitaet * delta_t) | round(1) }}
+          {% else %}
+            0
+          {% endif %}
+  - trigger:
+      - platform: state
+        entity_id: binary_sensor.lg_therma_v_hp_compressor_status
+        from: "off"
+        to: "on"
+    sensor:
+      - name: "hp compressor starts"
+        unique_id: "hp_compressor_starts"
+        state: "{{ (states('sensor.hp_compressor_starts') | int(0)) + 1 }}"
+        state_class: total
+        unit_of_measurement: "Starts"
+
+  - trigger:
+      - platform: state
+        entity_id: binary_sensor.lg_therma_v_hp_defrosting_status
+        from: "off"
+        to: "on"
+    sensor:
+      - name: "hp defrosting count"
+        unique_id: "hp_defrosting_count"
+        state: "{{ (states('sensor.lg_therma_v_hp_defrosting_status') | int(0)) + 1 }}"
+        state_class: total
+        unit_of_measurement: "Defrosts"
+
+input_boolean:
+  hp_dhw_state_after_heating:
+    name: "HP DHW State After Heating"
+    initial: off
+    icon: mdi:printer-3d-nozzle-heat-outline
+
+sensor:
+  - platform: history_stats
+    name: "hp compressor runtime"
+    unique_id: "hp_compressor_runtime"
+    entity_id: binary_sensor.lg_therma_v_hp_compressor_status
+    state: "on"
+    type: time
+    start: "{{ 0 }}"
+    end: "{{ now() }}"
+
+  - platform: history_stats
+    name: "hp defrosting runtime"
+    unique_id: "hp_defrosting_runtime"
+    entity_id: binary_sensor.lg_therma_v_hp_defrosting_status
+    state: "on"
+    type: time
+    start: "{{ 0 }}"
+    end: "{{ now() }}"
+
+  - platform: statistics
+    name: "HP Compressor starts last 7 days"
+    unique_id: "HP_Compressor_starts_L07d"
+    entity_id: sensor.hp_compressor_starts
+    state_characteristic: sum
+    max_age:
+      days: 7
+  - platform: statistics
+    name: "HP Compressor starts last 30 days"
+    unique_id: "HP_Compressor_starts_L30d"
+    entity_id: sensor.hp_compressor_starts
+    state_characteristic: sum
+    max_age:
+      days: 30
+  - platform: statistics
+    name: "HP Compressor runtime last 7 days"
+    unique_id: "HP_Compressor_runtime_L07d"
+    entity_id: sensor.hp_compressor_runtime
+    state_characteristic: sum
+    max_age:
+      days: 7
+  - platform: statistics
+    name: "HP Compressor runtime last 30 days"
+    unique_id: "HP_Compressor_runtime_L30d"
+    entity_id: sensor.hp_compressor_runtime
+    state_characteristic: sum
+    max_age:
+      days: 30
+
+# # ---------------------------------------------------------------------------------------------------------------
+# # Automations: Write modbus registers on input changes via GUI
+# # note: If you change a value by the sliders, it will take up to 60 seconds until the state variables are updated
+# # ---------------------------------------------------------------------------------------------------------------
+
+automation:
+  ### Input Select Operation Mode ###
+  #-------------------------------------------------------------------------------
+  - id: "hp_automation_operation_mode_modbus_update"
+    alias: "[Heatpump] Operation Mode Modbus Update"
+    description: "Select Operation Mode of Heatpump - send via Modbus"
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_select.hp_set_operation_mode
+    condition: []
+    variables:
+      kuehlen: 0
+      auto: 3
+      heizen: 4
+    action:
+      - action: mqtt.publish
+        data:
+          topic: LG_HP_Sub
+          payload: >-
+            {% if is_state('input_select.hp_set_operation_mode', 'Kühlen') %} '{"OperationMode":{{kuehlen}}}'
+            {% elif is_state('input_select.hp_set_operation_mode', 'Heizen') %} '{"OperationMode":{{heizen}}}'
+            {% else %}
+            '{"OperationMode":{{auto}}}'
+            {% endif %}
+    mode: single
+
+  - id: "hp_automation_operation_mode_input_select_update"
+    alias: "[Heatpump] Operation Mode InputSelect Update"
+    description: "Select Operation Mode of Heatpump - Read from State"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_operation_mode
+    condition: []
+    action:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hp_set_operation_mode
+        data:
+          option: >
+            {% if is_state('sensor.lg_therma_v_hp_operation_mode', '3') %}
+            Auto
+            {% elif is_state('sensor.lg_therma_v_hp_operation_mode', '4') %}
+            Heizen
+            {% else %}
+            Kühlen
+            {% endif %}
+    mode: single
+
+  #   ### Input Select Control Mode ###
+  #   #-------------------------------------------------------------------------------
+
+  - id: "hp_automation_control_method_modbus_update"
+    alias: "[Heatpump] Control Method Modbus Update"
+    description: "Select Control Method of Heatpump - send via MQTT"
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_select.hp_set_control_method
+    condition: []
+    variables:
+      auslass: 0
+      einlass: 1
+      raumluft: 2
+    action:
+      - action: mqtt.publish
+        data:
+          topic: LG_HP_Sub
+          payload: >-
+            {% if is_state('input_select.hp_set_operation_mode', 'Wasserauslasstemp. Steuerung') %} {"ControlMode":{{auslass}}}
+            {% elif is_state('input_select.hp_set_operation_mode', 'Raumluftsteuerung') %} {"ControlMode":{{raumluft}}}
+            {% else %}
+            {"ControlMode":{{einlass}}}
+            {% endif %}
+    mode: single
+
+  - id: "hp_automation_control_method_input_select_update"
+    alias: "[Heatpump] Control Method InputSelect Update"
+    description: "Select Control Method of Heatpump - Read from State"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_control_method
+    condition: []
+    action:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.hp_set_control_method
+        data:
+          option: >
+            {% if is_state('sensor.lg_therma_v_hp_control_method', '0') %}
+            Wasserauslasstemp. Steuerung
+            {% elif is_state('sensor.lg_therma_v_hp_control_method', '1') %}
+            Wassereinlasstemp. Steuerung
+            {% else %}
+            Raumluftsteuerung
+            {% endif %}
+    mode: single
+
+  #   ### Sollwertverschiebung von Heizkreis 1 (Heizkörper)###
+  #   #-------------------------------------------------------------------------------
+  #            '{"ShiftValue":{{states('input_number.hp_shift_value_in_auto_mode_circuit1') | int + 65536 }}}'
+
+  - id: "hp_automation_set_shift_value_in_auto_mode_circuit1_modbus_update"
+    alias: "[Heatpump] Automation set shift value in auto mode circuit1"
+    description: "Änderung der Vorlauftemperatur HK1 im AI Modus auf Modbus schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_number.hp_shift_value_in_auto_mode_circuit1
+    condition: []
+    action:
+      - action: mqtt.publish
+        data:
+          topic: LG_HP_Sub
+          payload: >-
+            {% set value = states('input_number.hp_shift_value_in_auto_mode_circuit1') | int(0) %}
+            {% if states('input_number.hp_shift_value_in_auto_mode_circuit1') | int(default=0) < 0 %}
+              {"ShiftValue":{{value+65536}}}
+            {% else %}
+              {"ShiftValue":{{value}}}
+            {% endif %}
+    mode: single
+
+  - id: "hp_automation_set_shift_value_in_auto_mode_circuit1_input_slider_update"
+    alias: "[Heatpump] automation set shift value in auto mode circuit1 input slider"
+    description: "Änderung der Vorlauftemperatur HK1 im AI Modus auf Input Slider schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_shift_value_in_auto_mode_circuit1
+    condition: []
+    action:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hp_shift_value_in_auto_mode_circuit1
+        data:
+          value: "{{ states('sensor.lg_therma_v_hp_shift_value_in_auto_mode_circuit1') }}"
+    mode: single
+  #   ### Sollwertverschiebung von Heizkreis 2 (Fußbodenheizung)###
+  #   #-------------------------------------------------------------------------------
+
+  #   - id: "hp_automation_set_shift_value_in_auto_mode_circuit2_modbus_update"
+  #     alias: "hp_automation_set_shift_value_in_auto_mode_circuit2_modbus_update"
+  #     description: "Änderung der Vorlauftemperatur HK2 im AI Modus auf Modbus schreiben"
+  #     triggers:
+  #       - trigger: state
+  #         entity_id:
+  #           - input_number.hp_shift_value_in_auto_mode_circuit2
+  #     condition: []
+  #     action:
+  #       - action: modbus.write_register
+  #         data_template:
+  #           hub: lg_heatpump
+  #           slave: !secret lg_heatpump_modbus_slave
+  #           address: 7
+  #           value: >
+  #             {% if states('input_number.hp_shift_value_in_auto_mode_circuit2') | int(default=0) < 0 %}
+  #             {{states('input_number.hp_shift_value_in_auto_mode_circuit2') | int + 65536 }}
+  #             {% else %}
+  #             {{states('input_number.hp_shift_value_in_auto_mode_circuit2') | int }}
+  #             {% endif %}
+  #     mode: single
+
+  #   - id: "hp_automation_set_shift_value_in_auto_mode_circuit2_input_slider_update"
+  #     alias: "hp_automation_set_shift_value_in_auto_mode_circuit2_input_slider_update"
+  #     description: "Änderung der Vorlauftemperatur HK2 im AI Modus auf Input Slider schreiben"
+  #     triggers:
+  #       - trigger: state
+  #         entity_id:
+  #           - sensor.hp_shift_value_in_auto_mode_circuit2
+  #     condition: []
+  #     action:
+  #       - action: input_number.set_value
+  #         target:
+  #           entity_id: input_number.hp_shift_value_in_auto_mode_circuit2
+  #         data:
+  #           value: "{{ states('sensor.hp_shift_value_in_auto_mode_circuit2') }}"
+  #     mode: single
+
+  ### HK1 Solltemperatur ###
+  #-------------------------------------------------------------------------------
+
+  - id: "hp_automation_set_target_temperatur_hk1_modbus_update"
+    alias: "[Heatpump] automation set target temperatur hk1"
+    description: "Änderung der HK1 Solltemperatur auf Modbus schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_number.hp_hk1_target_temperatur
+    condition: []
+    action:
+      - action: mqtt.publish
+        data:
+          topic: LG_HP_Sub
+          payload: >-
+            {% set value = states('input_number.hp_hk1_target_temperatur')|int*10 | int(25) %}
+            {"MasterTemp":{{value}}}
+    mode: single
+
+  - id: "hp_automation_set_target_temperatur_hk1_input_slider_update"
+    alias: "[Heatpump] automation set target temperatur hk1 input slider"
+    description: "Änderung der HK1 Solltemperatur auf Input Slider schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_target_temp_circuit1
+    condition: []
+    action:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hp_hk1_target_temperatur
+        data:
+          value: "{{ states('sensor.lg_therma_v_hp_target_temp_circuit1') }}"
+    mode: single
+
+  #   ### HK2 Solltemperatur ###
+  #   #-------------------------------------------------------------------------------
+
+  #   - id: "hp_automation_set_target_temperatur_hk2_modbus_update"
+  #     alias: "hp_automation_set_target_temperatur_hk2_modbus_update"
+  #     description: "Änderung der HK2 Solltemperatur auf Modbus schreiben"
+  #     triggers:
+  #       - trigger: state
+  #         entity_id:
+  #           - input_number.hp_hk2_target_temperatur
+  #     condition: []
+  #     action:
+  #       - action: modbus.write_register
+  #         data_template:
+  #           hub: lg_heatpump
+  #           slave: !secret lg_heatpump_modbus_slave
+  #           address: 5
+  #           value: "{{ states('input_number.hp_hk2_target_temperatur') |float *10 | int}}"
+  #     mode: single
+
+  #   - id: "hp_automation_set_target_temperatur_hk2_input_slider_update"
+  #     alias: "hp_automation_set_target_temperatur_hk2_input_slider_update"
+  #     description: "Änderung der HK2 Solltemperatur auf Input Slider schreiben"
+  #     triggers:
+  #       - trigger: state
+  #         entity_id:
+  #           - sensor.hp_target_temp_circuit2
+  #     condition: []
+  #     action:
+  #       - action: input_number.set_value
+  #         target:
+  #           entity_id: input_number.hp_hk2_target_temperatur
+  #         data:
+  #           value: "{{ states('sensor.hp_target_temp_circuit2') }}"
+  #     mode: single
+
+  ### DHW Solltemperatur ###
+  #-------------------------------------------------------------------------------
+
+  - id: "hp_automation_set_target_temperatur_modbus_update"
+    alias: "[Heatpump] automation set target temperatur modbus update"
+    description: "Änderung der DHW Solltemperatur auf Modbus schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_number.hp_dhw_target_temperatur
+    condition: []
+    action:
+      - action: mqtt.publish
+        data:
+          topic: LG_HP_Sub
+          payload: >-
+            {% set value = states('input_number.hp_dhw_target_temperatur')| int * 10 | int(48) %}
+            {"TargetDHW":{{value}}}
+    mode: single
+
+  - id: "hp_automation_set_modulation_from_mqtt_to_ha_update"
+    alias: "[Heatpump] automation to sync compressor modulation to helpers"
+    description: "Änderungen der Kompressormodulation werden übertragen"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_compressor_modulation
+    condition: []
+    action:
+      # --- Logik für den Input_select Schalter ---
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.to_state.state | int(999) == 0 }}"
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.hp_compressor_modulation_mode
+                data:
+                  option: "freie Modulation"
+        default:
+          - service: input_select.select_option
+            target:
+              entity_id: input_select.hp_compressor_modulation_mode
+            data:
+              option: "Modulation begrenzt"
+      # --- Logik für den Input_number Slider ---
+      - choose:
+          # Bedingung 2: Wenn der Sensorwert zwischen 40 und 100 liegt
+          - conditions:
+              - condition: template
+                value_template: >
+                  {% set wert = trigger.to_state.state | int(0) %}
+                  {{ wert >= 40 and wert <= 100 }}
+            sequence:
+              # Aktion: Setze den Input_number mit dem Sensorwert
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.hp_compressor_modulation
+                data:
+                  value: "{{ trigger.to_state.state | int(0) }}"
+    mode: single
+
+  - id: "hp_automation_set_compressor_modulation_from_slider_update"
+    alias: "[Heatpump] automation set compressor modulation after checking"
+    description: Schaltet die Modulierung nach den Angaben des Input Selects und dann dem Slider
+    triggers:
+      - platform: state
+        entity_id: input_select.hp_compressor_modulation_mode
+      - platform: state
+        entity_id: input_number.hp_compressor_modulation
+    action:
+      - choose:
+          # condition 1 der Schalter steht auf Freigabe
+          - conditions:
+              - condition: state
+                entity_id: input_select.hp_compressor_modulation_mode
+                state: "Modulation begrenzt"
+            sequence:
+              - service: mqtt.publish
+                data:
+                  topic: "LG_HP_Sub"
+                  payload: >
+                    {% set value = states('input_number.hp_compressor_modulation') | int(60)%}
+                    {"CompressorModulation":{{value}}}
+
+          # Condition 2 der schalter steht auf keine Modulation begrenzen
+          - conditions:
+              - condition: state
+                entity_id: input_select.hp_compressor_modulation_mode
+                state: "freie Modulation"
+            sequence:
+              - service: mqtt.publish
+                data:
+                  topic: "LG_HP_Sub"
+                  payload: {"CompressorModulation":0}
+    mode: single
+
+  - id: "hp_automation_set_target_temperatur_input_slider_update"
+    alias: "[Heatpump] automation set target temperatur input slider"
+    description: "Änderung der DHW Solltemperatur auf Input Slider schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_dhw_target_temp
+    condition: []
+    action:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hp_dhw_target_temperatur
+        data:
+          value: "{{ states('sensor.lg_therma_v_dhw_target_temp') }}"
+    mode: single
+
+  - id: hp_automation_set_energy_state_selection_update_to_MQTT
+    alias: "[Heatpump] Sende Heatpump Energy State via MQTT"
+    description: Sendet den Index des ausgewählten Heatpump Energy State an ein MQTT Topic.
+    trigger:
+      # Löst aus, wenn der Zustand des input_select Helfers sich ändert
+      - platform: state
+        entity_id: input_select.hp_set_energy_state
+    action:
+      # Service zum Senden einer MQTT Nachricht
+      - service: mqtt.publish
+        data:
+          topic: "LG_HP_Sub"
+          # Bestimme den numerischen Index der ausgewählten Option
+          payload: >
+            {% set options = state_attr('input_select.hp_set_energy_state', 'options') %}
+            {% set current_state = states('input_select.hp_set_energy_state') %}
+            {% if options is defined and current_state in options %}
+              {EnergyState:{{ options.index(current_state) }}}
+            {% else %}
+              {EnergyState:0}
+            {% endif %}
+    mode: single
+
+  - id: "hp_automation_set_energy_state_selection_update"
+    alias: "[Heatpump] automation set energy selection combo box"
+    description: "Änderung des Energy States auf den Input Select schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_energy_state_input_raw
+    condition: []
+    action:
+      - choose:
+          # Bedingung: Prüfe, ob der Wert eine gültige Zahl (0-8) ist
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.to_state.state | int(99) >= 0 and trigger.to_state.state | int(99) <= 8 }}"
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.hp_set_energy_state
+                data:
+                  # Nutze den numerischen Payload als Index, um die Option aus der Liste zu wählen
+                  option: >
+                    {% set options = state_attr('input_select.hp_set_energy_state', 'options') %}
+                    {% set index = trigger.to_state.state | int(0) %}
+                    {{ options[index] if index < options | length else options[0] }}
+    mode: single
+  # Some helper to add some heat to the dhw heating to get better values on heat production
+  - id: hp_set_dhw_after_heat_period
+    alias: "[Heatpump] set DHW helper to on after dhw status switches off"
+    description: Aktiviert den Wartungsmodus, wenn ein Sensor von ON zu OFF wechselt.
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.lg_therma_v_hp_dhw_heating_status
+        from: "on" # Der vorherige Zustand des Sensors
+        to: "off" # Der neue Zustand, der den Trigger auslöst
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.hp_dhw_state_after_heating
+
+utility_meter:
+  hp_compressor_starts_heizperiode:
+    source: sensor.hp_compressor_starts
+    cron: "0 0 1 9 *"
+  hp_compressor_starts_monthly:
+    source: sensor.hp_compressor_starts
+    cycle: monthly
+  hp_compressor_starts_weekly:
+    source: sensor.hp_compressor_starts
+    cycle: weekly
+  hp_compressor_starts_daily:
+    source: sensor.hp_compressor_starts
+    cycle: daily
+
+  hp_defrosting_count_heizperiode:
+    source: sensor.hp_defrosting_count
+    cron: "0 0 1 9 *"
+  hp_defrosting_count_monthly:
+    source: sensor.hp_defrosting_count
+    cycle: monthly
+  hp_defrosting_count_weekly:
+    source: sensor.hp_defrosting_count
+    cycle: weekly
+  hp_defrosting_count_daily:
+    source: sensor.hp_defrosting_count
+    cycle: daily
+
+  hp_compressor_runtime_heizperiode:
+    source: sensor.hp_compressor_runtime
+    cron: "0 0 1 9 *"
+  hp_compressor_runtime_monthly:
+    source: sensor.hp_compressor_runtime
+    cycle: monthly
+  hp_compressor_runtime_weekly:
+    source: sensor.hp_compressor_runtime
+    cycle: weekly
+  hp_compressor_runtime_daily:
+    source: sensor.hp_compressor_runtime
+    cycle: daily
+
+  hp_defrosting_time_heizperiode:
+    source: sensor.hp_defrost_runtime
+    cron: "0 0 1 9 *"
+  hp_defrosting_time_monthly:
+    source: sensor.hp_defrost_runtime
+    cycle: monthly
+  hp_defrosting_time_weekly:
+    source: sensor.hp_defrost_runtime
+    cycle: weekly
+  hp_defrosting_time_daily:
+    source: sensor.hp_defrost_runtime
+    cycle: daily

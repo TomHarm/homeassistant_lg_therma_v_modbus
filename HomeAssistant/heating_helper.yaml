@@ -1,0 +1,600 @@
+# ########## HA Local Solar monitoring Integration ##########
+#
+# (C) 2025 Bauer Harmes
+#
+# provide sensors for room climate and current temperature situation
+# necessary inputs:
+#
+
+# first download the weater forecast to HA Sensor
+template:
+  - trigger:
+      - platform: time_pattern
+        hours: "/1"
+    action:
+      - action: weather.get_forecasts
+        target:
+          entity_id:
+            - weather.openweathermap
+        data:
+          type: hourly
+        response_variable: vorhersage
+    sensor:
+      - unique_id: weather_entity_forecast
+        name: Wettervorhersage
+        state: "{{ now().isoformat() }}"
+        icon: mdi:calendar-range
+        attributes:
+          forecast: "{{ vorhersage['weather.openweathermap'].forecast }}"
+  - trigger:
+      trigger: event
+      event_type: wp_ww_consumed_raise
+    sensor:
+      - name: "HP DHW consumed Energy"
+        unique_id: "HP_dhw_consumed_energy"
+        unit_of_measurement: "kWh"
+        state_class: total_increasing
+        icon: mdi:meter-electric-outline
+        state: >-
+          {% set alter_wert = states('sensor.HP_dhw_consumed_energy') | float(0) %}
+          {% if is_state('sensor.HP_dhw_consumed_energy','unavailable')  %}
+          {% set alter_wert = 0 | float %}
+          {% endif %}
+          {% set add = trigger.event.data.kwhToAdd | float(0) %}
+          {{ alter_wert + add }}
+  # Sensors for extracting the heat and energy whilst generating hot water
+  # We start with the energy of heat
+  - trigger:
+      trigger: event
+      event_type: wp_ww_heat_raise
+    sensor:
+      - name: "HP DHW heat Energy"
+        unique_id: "HP_dhw_heat_energy"
+        unit_of_measurement: "kWh"
+        state_class: total_increasing
+        icon: mdi:thermometer-lines
+        state: >-
+          {% set alter_wert = states('sensor.HP_dhw_heat_energy') | float(0) %}
+          {% if is_state('sensor.HP_dhw_heat_energy','unavailable')  %}
+          {%   set alter_wert = 0 | float %}
+          {% endif %}
+          {% set add = trigger.event.data.kwhToAdd | float(0) %}
+          {{ alter_wert + add }}
+  - trigger:
+      - platform: time
+        at: "08:05:00"
+    sensor:
+      - name: "Wärmste Stunde heute"
+        unique_id: "waermste_stunde_heute"
+        icon: mdi:sun-thermometer-outline
+        state: >
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+          {% if forecast and forecast | length >= 10 %}
+            {% set next_10h_forecast = forecast[:10] %}
+            {% set warmest_hour_data = next_10h_forecast | max(attribute='temperature') %}
+            {{ as_timestamp(warmest_hour_data.datetime) | timestamp_custom('%H:%M') }}
+          {% else %}
+            unavailable
+          {% endif %}
+        attributes:
+          temperatur: >
+            {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+            {% set current = state_attr('sensor.warmste_stunde_heute', 'temperatur') | float(0) %}
+            {% if forecast and forecast | length >= 10 %}
+              {% set next_12h_forecast = forecast[:10] %}
+              {% set warmest_hour_data = next_12h_forecast | max(attribute='temperature') %}
+              {{ warmest_hour_data.temperature }}
+            {% else %}
+              unknown
+            {% endif %}
+
+  - sensor:
+      - name: "LG Therma V current COP"
+        unique_id: lg_therma_v_current_cop
+        state_class: measurement
+        device_class: power_factor
+        icon: mdi:piston
+        state: >
+          {% if states('sensor.hp_current_power')|float(0) < 1 or states('sensor.shelly_pro3em_heizung_total_active_power')|float(0) < 200 %}
+            {{ 0 }}
+          {% else %} 
+            {{ (states('sensor.hp_current_power')|float(0)/states('sensor.shelly_pro3em_heizung_total_active_power')|float(0))|round(2) }}
+          {% endif %}
+      - name: "HP JAZ Heizperiode"
+        unique_id: "hp_jaz_heizperiode"
+        state_class: measurement
+        icon: mdi:piston
+        state: >
+          {% if states('sensor.shelly_3em_energy_heizperiode')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_generated_energy_heizperiode')|float(0) / states('sensor.shelly_3em_energy_heizperiode')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP MAZ"
+        unique_id: "hp_maz"
+        state_class: measurement
+        icon: mdi:piston
+        state: >
+          {% if states('sensor.shelly_3em_heizung_monatsverbrauch')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_generated_energy_monthly')|float(0) / states('sensor.shelly_3em_heizung_monatsverbrauch')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP WAZ"
+        unique_id: "hp_waz"
+        state_class: measurement
+        icon: mdi:piston
+        state: >
+          {% if states('sensor.shelly_3em_heizung_wochenverbrauch')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_generated_energy_weekly')|float(0) / states('sensor.shelly_3em_heizung_wochenverbrauch')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP TAZ"
+        unique_id: "hp_taz"
+        state_class: measurement
+        icon: mdi:piston
+        state: >
+          {% if states('sensor.shelly_3em_heizung_tagesverbrauch')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_generated_energy_daily')|float(0) / states('sensor.shelly_3em_heizung_tagesverbrauch')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP AZ 7d"
+        unique_id: "hp_az_7d"
+        state_class: measurement
+        icon: mdi:piston
+        state: >
+          {% if states('sensor.shelly_heizung_energy_last_7_days')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_generated_energy_last_7_days')|float(0) / states('sensor.shelly_heizung_energy_last_7_days')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP AZ 30d"
+        unique_id: "hp_az_30d"
+        state_class: measurement
+        icon: mdi:piston
+        state: >
+          {% if states('sensor.shelly_heizung_energy_last_30_days')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_generated_energy_last_30_days')|float(0) / states('sensor.shelly_heizung_energy_last_30_days')|float(0))|round(2)}}
+          {% endif %}
+
+      - name: "HP DHW JAZ Heizperiode"
+        unique_id: "hp_dhw_jaz_heizperiode"
+        state_class: measurement
+        icon: mdi:water-boiler
+        state: >
+          {% if states('sensor.hp_dhw_consumed_energy_heizperiode')|float(0) == 0 %}
+            {{ 0 }}
+          {% else %}
+            {{ (states('sensor.hp_dhw_heat_energy_heizperiode')|float(0) / states('sensor.hp_dhw_consumed_energy_heizperiode')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP DHW MAZ"
+        unique_id: "hp_dhw_maz"
+        state_class: measurement
+        icon: mdi:water-boiler
+        state: >
+          {% if states('sensor.hp_dhw_consumed_energy_monthly')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_dhw_heat_energy_monthly')|float(0) / states('sensor.hp_dhw_consumed_energy_monthly')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP DHW WAZ"
+        unique_id: "hp_dhw_waz"
+        state_class: measurement
+        icon: mdi:water-boiler
+        state: >
+          {% if states('sensor.hp_dhw_consumed_energy_weekly')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_dhw_heat_energy_weekly')|float(0) / states('sensor.hp_dhw_consumed_energy_weekly')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP DHW TAZ"
+        unique_id: "hp_dhw_taz"
+        state_class: measurement
+        icon: mdi:water-boiler
+        state: >
+          {% if states('sensor.hp_dhw_consumed_energy_daily')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_dhw_heat_energy_daily')|float(0) / states('sensor.hp_dhw_consumed_energy_daily')|float(0))|round(2)}}
+          {% endif %}
+      - name: "HP DHW AZ 7d"
+        unique_id: "hp_dhw_az_7d"
+        state_class: measurement
+        icon: mdi:water-boiler
+        state: >
+          {{ (states('sensor.hp_dhw_heat_energy_last_7_days')|float(0) / states('sensor.hp_dhw_consumed_energy_last_7_days')|float(0))|round(2)}}
+      - name: "HP DHW AZ 30d"
+        unique_id: "hp_dhw_az_30d"
+        state_class: measurement
+        icon: mdi:water-boiler
+        state: >
+          {% if states('sensor.hp_dhw_consumed_energy_last_30_days')|float(0) == 0 %}
+            {{0}}
+          {% else %}
+            {{ (states('sensor.hp_dhw_heat_energy_last_30_days')|float(0) / states('sensor.hp_dhw_consumed_energy_last_30_days')|float(0))|round(2)}}
+          {% endif %}
+
+      - name: Shelly Heizung energy last 7 days
+        unique_id: shelly_heizung_energy_last_7_days
+        device_class: energy
+        unit_of_measurement: kWh
+        state_class: measurement
+        icon: mdi:flash
+        state: >
+          {{ states('sensor.shelly_3em_heizung_energy_last_7_days_wh')|float(0)/1000.0 | round(2) }}
+      - name: Shelly Heizung energy last 30 days
+        unique_id: shelly_heizung_energy_last_30_days
+        device_class: energy
+        unit_of_measurement: kWh
+        state_class: measurement
+        icon: mdi:flash
+        state: >
+          {{ states('sensor.shelly_3em_heizung_energy_last_30_days_wh')|float(0)/1000.0 | round(2) }}
+
+      - name: "Durchschnittstemperatur Forecast 4h"
+        unique_id: "durchschnittstemperatur_4h_berechnung"
+        unit_of_measurement: °C
+        device_class: temperature
+        state_class: measurement
+        state: >
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+
+          {% if forecast is not none and forecast | length >= 4 %}
+            {% set next_four_hours = forecast[:4] %}
+            {{ (next_four_hours | map(attribute='temperature') | average) | round(1) }}
+          {% else %}
+            {{ state_attr('sensor.lg_therma_v_hp_outside_temp')|round(1)}}
+          {% endif %}
+      - name: "Durchschnittstemperatur Forecast 24h"
+        unique_id: "durchschnittstemperatur_24h_berechnung"
+        unit_of_measurement: °C
+        device_class: temperature
+        state_class: measurement
+        state: >
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+
+          {% if forecast is not none and forecast | length >= 4 %}
+            {% set next_four_hours = forecast[:24] %}
+            {{ (next_four_hours | map(attribute='temperature') | average) | round(1) }}
+          {% else %}
+            {{ state_attr('sensor.lg_therma_v_hp_outside_temp')|round(1)}}
+          {% endif %}
+      - name: "Durchschnittstemperatur Forecast 12h"
+        unique_id: "durchschnittstemperatur_12h_berechnung"
+        unit_of_measurement: °C
+        device_class: temperature
+        state_class: measurement
+        state: >
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+
+          {% if forecast is not none and forecast | length >= 4 %}
+            {% set next_four_hours = forecast[:12] %}
+            {{ (next_four_hours | map(attribute='temperature') | average) | round(1) }}
+          {% else %}
+            {{ state_attr('sensor.lg_therma_v_hp_outside_temp')|round(1)}}
+          {% endif %}
+      - name: "Durchschnittswind Forecast 4h"
+        unique_id: "durchschnittswind_4h_berechnung"
+        unit_of_measurement: km/h
+        device_class: wind_speed
+        state_class: measurement
+        state: >
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+
+          {% if forecast is not none and forecast | length >= 4 %}
+            {% set next_four_hours = forecast[:4] %}
+            {{ (next_four_hours | map(attribute='wind_speed') | average) | round(1) }}
+          {% else %}
+            {{ 0 }}
+          {% endif %}
+      - name: "HP Estimated Heat forecast 24hrs"
+        unique_id: hp_estimated_heat_forecast_24hrs
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: measurement
+        state: >
+          {% set a = -0.435006474 %}
+          {% set b = 8.718558774 %}
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+          {% set y = namespace(result=0.0) %}
+          {% if forecast is not none %}
+            {% for stunde in forecast[:24] %}
+              {% set temperatur = stunde.temperature %}
+              {% set y.result = y.result+a*temperatur+b %}             
+            {% endfor %}
+            {{ y.result | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
+      - name: "HP Estimated Heat forecast 12hrs"
+        unique_id: hp_estimated_heat_forecast_12hrs
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: measurement
+        state: >
+          {% set a = -0.435006474 %}
+          {% set b = 8.718558774 %}
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+          {% set y = namespace(result=0.0) %}
+          {% if forecast is not none %}
+            {% for stunde in forecast[:12] %}
+              {% set temperatur = stunde.temperature %}
+              {% set y.result = y.result+a*temperatur+b %}             
+            {% endfor %}
+            {{ y.result | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
+      - name: "HP Heat loss production to heating last 7 days"
+        unique_id: hp_heat_loss_production_to_heating_last_7_days
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: measurement
+        state: >
+          {% set prod = states('sensor.hp_generated_energy_last_7_days')|float(0) %}
+          {% set ww = states('hp_dhw_heat_energy_last_7_days')|float(0) %}
+          {% set cons = states('heating_consumed_energy_last_7_days')| float(0) %}
+          {{ prod-ww-cons }}
+
+  # Switches for helping on the heating system
+  # here first the heating circuit pump (or ext pump) this is driven by a light switch, so
+  # this helper here gives us a normal switch with on/off
+  - switch:
+      - name: HP Heizkreispumpe Schalter
+        unique_id: "hp_heizkreispumpe_schalter"
+        icon: mdi:water-pump
+        state: "{{ is_state('light.shelly_pro1_dimmer','on') }}"
+        turn_on:
+          - service: light.turn_on
+            target:
+              entity_id: light.shelly_pro1_dimmer
+        turn_off:
+          - service: light.turn_off
+            target:
+              entity_id: light.shelly_pro1_dimmer
+
+sensor:
+  - platform: integration
+    name: LG Therma V generated energy
+    unique_id: lg_therma_v_generated_energy
+    method: trapezoidal
+    source: sensor.hp_current_power
+    unit_prefix: k # Um die Einheit in kWh umzuwandeln
+    round: 3 # Das Ergebnis auf drei Dezimalstellen runden
+
+  - platform: statistics
+    name: "HP DHW consumed energy last 7 days"
+    unique_id: "HP_dhw_consumed_energy_L07d"
+    entity_id: sensor.HP_dhw_consumed_energy
+    state_characteristic: sum_differences
+    max_age:
+      days: 7
+  - platform: statistics
+    name: "HP DHW consumed energy last 30 days"
+    unique_id: "HP_dhw_consumed_energy_L30d"
+    entity_id: sensor.HP_dhw_consumed_energy
+    state_characteristic: sum_differences
+    max_age:
+      days: 30
+
+  - platform: statistics
+    name: "HP DHW heat energy last 7 days"
+    unique_id: "HP_dhw_heat_energy_L07d"
+    entity_id: sensor.hp_dhw_heat_energy
+    state_characteristic: sum_differences
+    max_age:
+      days: 7
+  - platform: statistics
+    name: "HP DHW heat energy last 30 days"
+    unique_id: "HP_dhw_heat_energy_L30d"
+    entity_id: sensor.HP_dhw_heat_energy
+    state_characteristic: sum_differences
+    max_age:
+      days: 30
+  - platform: statistics
+    name: "HP generated energy last 7 days"
+    unique_id: "hp_generated_energy_L07d"
+    entity_id: sensor.hp_generated_energy_total
+    state_characteristic: sum_differences
+    max_age:
+      days: 7
+  - platform: statistics
+    name: "HP generated energy last 30 days"
+    unique_id: "hp_generated_energy_L30d"
+    entity_id: sensor.hp_generated_energy_total
+    state_characteristic: sum_differences
+    max_age:
+      days: 30
+  - platform: statistics
+    name: "Heating consumed energy last 7 days"
+    unique_id: "heating_consumed_energy_L07d"
+    entity_id: sensor.heating_consumed_energy_total
+    state_characteristic: sum_differences
+    max_age:
+      days: 7
+  - platform: statistics
+    name: "Heating consumed energy last 30 days"
+    unique_id: "heating_consumed_energy_L30d"
+    entity_id: sensor.heating_consumed_energy_total
+    state_characteristic: sum_differences
+    max_age:
+      days: 30
+  - platform: statistics
+    name: "Shelly 3EM Heizung energy last 7 days Wh"
+    unique_id: "shelly_3em_heizung_energy_L07d Wh"
+    entity_id: sensor.shelly_3em_heizung_tagesverbrauch
+    state_characteristic: sum
+    max_age:
+      days: 7
+  - platform: statistics
+    name: "Shelly 3EM Heizung energy last 30 days Wh"
+    unique_id: "shelly_3em_heizung_energy_L30d Wh"
+    entity_id: sensor.shelly_3em_heizung_tagesverbrauch
+    state_characteristic: sum
+    max_age:
+      days: 30
+
+input_number:
+  # Input Number
+  # -----------------------------------------
+  # Mixer setting as a helper which translates then to the mixer and is usable from the GUI
+  hp_mischer_stellung:
+    name: HP Mischer Stellung
+    min: 0
+    max: 100
+    step: 1
+    mode: slider
+
+utility_meter:
+  hp_dhw_consumed_energy_heizperiode:
+    source: sensor.HP_dhw_consumed_energy
+    cron: "0 0 1 9 *"
+  hp_dhw_consumed_energy_monthly:
+    source: sensor.HP_dhw_consumed_energy
+    cycle: monthly
+  hp_dhw_consumed_energy_weekly:
+    source: sensor.HP_dhw_consumed_energy
+    cycle: weekly
+  hp_dhw_consumed_energy_daily:
+    source: sensor.HP_dhw_consumed_energy
+    cycle: daily
+
+  hp_dhw_heat_energy_heizperiode:
+    name: HP DHW heat energy heizperiode
+    source: sensor.HP_dhw_heat_energy
+    cron: "0 0 1 9 *"
+  hp_dhw_heat_energy_monthly:
+    name: HP DHW heat energy monthly
+    source: sensor.HP_dhw_heat_energy
+    cycle: monthly
+  hp_dhw_heat_energy_weekly:
+    name: HP DHW heat energy weekly
+    source: sensor.HP_dhw_heat_energy
+    cycle: weekly
+  hp_dhw_heat_energy_daily:
+    name: HP DHW heat energy daily
+    source: sensor.HP_dhw_heat_energy
+    cycle: daily
+
+  shelly_3em_energy_heizperiode:
+    name: Shelly 3EM Energy Heizperiode
+    source: sensor.shelly_pro3em_heizung_total_active_energy
+    cron: "0 0 1 9 *"
+
+  hp_generated_energy_heizperiode:
+    name: HP Generated energy Heizperiode
+    source: sensor.hp_generated_energy_total
+    cron: "0 0 1 9 *"
+  hp_generated_energy_monthly:
+    name: HP Generated energy monthly
+    source: sensor.hp_generated_energy_total
+    cycle: monthly
+  hp_generated_energy_weekly:
+    name: HP Generated energy weekly
+    source: sensor.hp_generated_energy_total
+    cycle: weekly
+  hp_generated_energy_daily:
+    name: HP Generated energy daily
+    source: sensor.hp_generated_energy_total
+    cycle: daily
+  hp_generated_energy_yearly:
+    name: HP Generated energy yearly
+    source: sensor.hp_generated_energy_total
+    cycle: yearly
+
+  heating_consumed_energy_heizperiode:
+    name: Heating consumed energy Heizperiode
+    source: sensor.heating_consumed_energy_total
+    cron: "0 0 1 9 *"
+  heating_consumed_energy_monthly:
+    name: Heating consumed energy monthly
+    source: sensor.heating_consumed_energy_total
+    cycle: monthly
+  heating_consumed_energy_weekly:
+    name: Heating consumed energy weekly
+    source: sensor.heating_consumed_energy_total
+    cycle: weekly
+  heating_consumed_energy_daily:
+    name: Heating consumed energy daily
+    source: sensor.heating_consumed_energy_total
+    cycle: daily
+  heating_consumed_energy_yearly:
+    name: Heating consumed energy yearly
+    source: sensor.heating_consumed_energy_total
+    cycle: yearly
+
+automation:
+  - id: hp_energy_increase_at_dhw_production
+    alias: "[Heatpump] Energy increase at DWH production"
+    description: zaehlt den Strom bei DHW Bereitung
+    trigger:
+      - platform: state
+        entity_id: sensor.shelly_pro3em_heizung_total_active_energy
+    condition:
+      - condition: state
+        entity_id: binary_sensor.lg_therma_v_hp_dhw_heating_status
+        state: "on"
+    action:
+      - event: wp_ww_consumed_raise
+        event_data:
+          kwhToAdd: "{{((trigger.to_state.state | float) - (trigger.from_state.state | float)) | round(5) }}"
+    mode: single
+
+  - id: hp_heat_increase_at_dhw_production
+    alias: "[Heatpump] Heat increase at DWH production"
+    description: zaehlt die Waerme bei DHW Bereitung
+    trigger:
+      - platform: state
+        entity_id: sensor.mbusinoeth_13_1_energy
+    condition:
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: binary_sensor.lg_therma_v_hp_dhw_heating_status
+            state: "on"
+          - condition: state
+            entity_id: input_boolean.hp_dhw_state_after_heating
+            state: "on"
+    action:
+      - event: wp_ww_heat_raise
+        event_data:
+          kwhToAdd: "{{((trigger.to_state.state | float) - (trigger.from_state.state | float)) | round(5) }}"
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.hp_dhw_state_after_heating
+
+    mode: single
+
+  # - alias: "[Heatpump] Mischer steuern"
+  #   description: Steuert den Mischer, wenn der Slider geändert wird 0 ist auf Puffer 100 auf Ruecklauf.
+  #   trigger:
+  #     # Löst aus, wenn der Zustand des input_number-Helfers sich ändert
+  #     - platform: state
+  #       entity_id: input_number.hp_mischer_stellung
+  #   action:
+  #     - choose:
+  #         - conditions:
+  #             - condition: and
+  #               conditions:
+  #                 - condition: numeric_state
+  #                   entity_id: input_number.hp_mischer_stellung
+  #                   above: 0
+  #                 - condition: state
+  #                   entity_id: binary_sensor.hp_heizkreispumpe_schalter
+  #                   state: "on"
+  #           sequence:
+  #             - service: light.turn_on
+  #               target:
+  #                 entity_id: light.shelly_pro1_dimmer
+  #               data:
+  #                 # Helligkeit wird vom Slider-Wert abgeleitet
+  #                 brightness_pct: "{{ states('input_number.hp_mischer_stellung') | int(0) }}"
+  #           default:
+  #             - service: light.turn_off
+  #               target:
+  #                 enitity_id: light.shelly_pro1_dimmer
+  #   mode: single
