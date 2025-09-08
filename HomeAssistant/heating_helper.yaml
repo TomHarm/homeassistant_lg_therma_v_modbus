@@ -306,6 +306,27 @@ template:
               {% set temperatur = stunde.temperature %}
               {% set y.result = y.result+a*temperatur+b %}             
             {% endfor %}
+            {% set y.result = y.result / 24 %}
+            {{ y.result | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
+      - name: "HP Estimated Heat forecast 18hrs"
+        unique_id: hp_estimated_heat_forecast_18hrs
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: measurement
+        state: >
+          {% set a = -0.435006474 %}
+          {% set b = 8.718558774 %}
+          {% set forecast = state_attr('sensor.wettervorhersage', 'forecast') %}
+          {% set y = namespace(result=0.0) %}
+          {% if forecast is not none %}
+            {% for stunde in forecast[:18] %}
+              {% set temperatur = stunde.temperature %}
+              {% set y.result = y.result+a*temperatur+b %}             
+            {% endfor %}
+            {% set y.result = y.result / 18 %}
             {{ y.result | round(1) }}
           {% else %}
             unavailable
@@ -325,6 +346,7 @@ template:
               {% set temperatur = stunde.temperature %}
               {% set y.result = y.result+a*temperatur+b %}             
             {% endfor %}
+            {% set y.result = y.result / 12 %}
             {{ y.result | round(1) }}
           {% else %}
             unavailable

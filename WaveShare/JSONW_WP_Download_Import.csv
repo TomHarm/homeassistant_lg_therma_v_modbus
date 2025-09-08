@@ -13,3 +13,6 @@ No., mode (set coil1 set register2 transparent3), JSON name, slave address, regi
 12,1,ControlMode":,1,1,0,2,0,0
 13,1,EnergyState":,1,9,0,2,0,0
 14,1,CompressorModulation":,1,23,0,2,0,0
+15,1,EnergyLimit":,1,24,0,2,0,0
+16,0,LimitEnergy": 1,1,6,1,1,0,0
+17,0,LimitEnergy": 0,1,6,0,1,0,0

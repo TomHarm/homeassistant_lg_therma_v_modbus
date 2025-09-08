@@ -56,13 +56,13 @@ mqtt:
       state_topic: LG_Heatpump
       value_template: >
         {% set last = states('sensor.mqtt.hp_inlet_temp') | int(0) %}
-        {% set temp = value_json['Reading Values']['Water Inlet Temp'] if value_json is defined else last %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Water Inlet and Outlet Temp'] if value_json is defined else last %}
+        {% set output = ((temp/65536)|round(0)) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Water Inlet Temp']>=0 %}
+            {% if value_json['Reading Values']['Water Inlet and Outlet Temp']>=0 %}
               online
             {% else %}
               offline
@@ -81,13 +81,13 @@ mqtt:
       state_topic: LG_Heatpump
       value_template: >
         {% set last = states('sensor.mqtt.hp_outlet_temp') | int(0) %}
-        {% set temp = value_json['Reading Values']['Water Outlet Temp'] if value_json is defined else last %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Water Inlet and Outlet Temp'] if value_json is defined else last %}
+        {% set output = (temp%65536) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Water Outlet Temp']|is_number %}
+            {% if value_json['Reading Values']['Water Inlet and Outlet Temp']|is_number %}
               online
             {% else %}
               offline
@@ -105,13 +105,13 @@ mqtt:
       device_class: temperature
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Outlet Temp Backup Heater'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Outlet Temp Backup Heater and DH'] if value_json is defined else 0 %}
+        {% set output = ((temp/65536)|round(0)) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Outlet Temp Backup Heater'] |is_number%}
+            {% if value_json['Reading Values']['Outlet Temp Backup Heater and DH'] |is_number%}
               online
             {% else %}
               offline
@@ -129,13 +129,13 @@ mqtt:
       device_class: temperature
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['DHW Temperature'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Outlet Temp Backup Heater and DH'] if value_json is defined else 0 %}
+        {% set output = (temp%65536) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['DHW Temperature'] |is_number %}
+            {% if value_json['Reading Values']['Outlet Temp Backup Heater and DH'] |is_number %}
               online
             {% else %}
               offline
@@ -164,13 +164,13 @@ mqtt:
       unit_of_measurement: "°C"
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Room Temp Circ 1'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Room Temp Circ 1 and FlowRate'] if value_json is defined else 0 %}
+        {% set output = ((temp/65536)|round(0)) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Room Temp Circ 1'] |is_number %}
+            {% if value_json['Reading Values']['Room Temp Circ 1 and FlowRate'] |is_number %}
               online
             {% else %}
               offline
@@ -188,14 +188,14 @@ mqtt:
       unit_of_measurement: "L/min"
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['FlowRate'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Room Temp Circ 1 and FlowRate'] if value_json is defined else 0 %}
+        {% set output = (temp%65536) / 10.0 | float(1) %}
         {% set output = 0 if output <= 5 else output %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['FlowRate'] |is_number %}
+            {% if value_json['Reading Values']['Room Temp Circ 1 and FlowRate'] |is_number %}
               online
             {% else %}
               offline
@@ -254,13 +254,13 @@ mqtt:
       unit_of_measurement: "°C"
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Outdoor Temperature'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Outdoor Temperature and water pr'] if value_json is defined else 0 %}
+        {% set output = ((temp/65536)|round(0)) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Outdoor Temperature'] |is_number %}
+            {% if value_json['Reading Values']['Outdoor Temperature and water pr'] |is_number %}
               online
             {% else %}
               offline
@@ -278,13 +278,13 @@ mqtt:
       unit_of_measurement: bar
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Water Pressure'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Outdoor Temperature and water pr'] if value_json is defined else 0 %}
+        {% set output = (temp%65536) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Water Pressure'] |is_number %}
+            {% if value_json['Reading Values']['Outdoor Temperature and water pr'] |is_number %}
               online
             {% else %}
               offline
@@ -326,13 +326,13 @@ mqtt:
       unit_of_measurement: °C
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Temperature Suction'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Temperature Suction and heat gas'] if value_json is defined else 0 %}
+        {% set output = ((temp/65536) | round(0)) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Temperature Suction'] |is_number %}
+            {% if value_json['Reading Values']['Temperature Suction and heat gas'] |is_number %}
               online
             {% else %}
               offline
@@ -350,13 +350,13 @@ mqtt:
       unit_of_measurement: °C
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Heat Gas Temperature'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Temperature Suction and heat gas'] if value_json is defined else 0 %}
+        {% set output = (temp%65536) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Heat Gas Temperature'] |is_number %}
+            {% if value_json['Reading Values']['Temperature Suction and heat gas'] |is_number %}
               online
             {% else %}
               offline
@@ -374,13 +374,13 @@ mqtt:
       unit_of_measurement: "°C"
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Steam Temp pre Condensator'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Steam Temp pre and post Condensa'] if value_json is defined else 0 %}
+        {% set output = ((temp/65536) | round(0)) / 10.0 | float(1) | round(2) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Steam Temp pre Condensator'] |is_number %}
+            {% if value_json['Reading Values']['Steam Temp pre and post Condensa'] |is_number %}
               online
             {% else %}
               offline
@@ -398,13 +398,13 @@ mqtt:
       unit_of_measurement: "°C"
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Steam Temp post Condensator'] if value_json is defined else 0 %}
-        {% set output = temp / 10.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Steam Temp pre and post Condensa'] if value_json is defined else 0 %}
+        {% set output = (temp%65536) / 10.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Steam Temp post Condensator'] |is_number %}
+            {% if value_json['Reading Values']['Steam Temp pre and post Condensa'] |is_number %}
               online
             {% else %}
               offline
@@ -423,7 +423,7 @@ mqtt:
       state_topic: LG_Heatpump
       value_template: >
         {% set temp = value_json['Reading Values']['Steam Pressure pre Condensator'] if value_json is defined else 0 %}
-        {% set output = temp / 100.0 | float(1) %}
+        {% set output = ((temp/65536) | round(0)) / 100.0 | float(1) | round(2) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
@@ -446,13 +446,13 @@ mqtt:
       unit_of_measurement: bar
       state_topic: LG_Heatpump
       value_template: >
-        {% set temp = value_json['Reading Values']['Steam Pressure post Condensator'] if value_json is defined else 0 %}
-        {% set output = temp / 100.0 | float(1) %}
+        {% set temp = value_json['Reading Values']['Steam Pressure pre Condensator'] if value_json is defined else 0 %}
+        {% set output = (temp % 65536) / 100.0 | float(1) %}
         {{output}}
       availability:
         - topic: LG_Heatpump
           value_template: >
-            {% if value_json['Reading Values']['Steam Pressure post Condensator'] |is_number %}
+            {% if value_json['Reading Values']['Steam Pressure pre Condensator'] |is_number %}
               online
             {% else %}
               offline
@@ -464,6 +464,29 @@ mqtt:
         manufacturer: WaveShare
         model: V1.523
 
+    - name: "hp_compressor_frequency" # Dampfdruck Verdampfer
+      unique_id: "mqtt.hp_compressor_frequency"
+      device_class: Frequency
+      unit_of_measurement: Hz
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set temp = value_json['Reading Values']['Compressor Frequency'] if value_json is defined else 0 %}
+        {% set output = temp %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Reading Values']['Compressor Frequency'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
     #     - name: "hp_compressor_rpm" # Kompressordrehzahl
     #       unique_id: "mqtt.hp_compressor_rpm"
     #       scale: 60
@@ -810,6 +833,30 @@ mqtt:
         manufacturer: WaveShare
         model: V1.523
 
+    - name: "hp_energy_consumption_limit"
+      unique_id: "mqtt.hp_energy_consumption_limit"
+      state_topic: LG_Heatpump
+      state_class: measurement
+      unit_of_measurement: "kW"
+      value_template: >
+        {% set output = value_json['Holding Values']['Energy Consumption Limit'] if value_json is defined else 0 %}
+        {% set output = output / 10.0 | float(1) %}
+        {{output}}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Holding Values']['Energy Consumption Limit'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
   # -------------------------------------------------
   switch:
     # coil_register (binäre Daten, nur schreiben)
@@ -882,6 +929,31 @@ mqtt:
       payload_on: 1
       command_topic: LG_HP_Sub
       command_template: '{"SilentMode": {{ value }}}'
+      device:
+        identifiers:
+          - lg_therma_V
+        name: LG Therma V
+        manufacturer: WaveShare
+        model: V1.523
+
+    - name: "hp_energy_consumption_limited" # Ruhemodus an/aus
+      unique_id: "mqtt.hp_energy_consumption_limited"
+      state_topic: LG_Heatpump
+      value_template: >
+        {% set output = value_json['Coils']['Energy consumption limited'] if value_json is defined else 0 %}
+        {{ output }}
+      availability:
+        - topic: LG_Heatpump
+          value_template: >
+            {% if value_json['Coils']['Energy consumption limited'] |is_number %}
+              online
+            {% else %}
+              offline
+            {% endif %}
+      payload_off: 0
+      payload_on: 1
+      command_topic: LG_HP_Sub
+      command_template: '{"LimitEnergy": {{ value }}}'
       device:
         identifiers:
           - lg_therma_V
@@ -1307,12 +1379,26 @@ input_number:
     max: 55
     step: 1
 
+  # Setting for Usage in the PID Controller to set the max Vorlauf
+  hp_dhw_max_temperatur:
+    name: "Max Vorlauf DHW"
+    min: 50
+    max: 70
+    step: 1
+
     # Setting to reduce compressor modulation after run up phase.
   hp_compressor_modulation:
     name: "Compressor Modulation setting"
     min: 40
     max: 100
     step: 1
+
+    # a helper to narrow down the consumption of the heatpump
+  hp_energy_consumption_limit:
+    name: "Heatpump max consumption limit"
+    min: 1
+    max: 25
+    step: 0.1
 
 input_select:
   # Input Select
@@ -1429,6 +1515,20 @@ template:
           {% else %}
             0
           {% endif %}
+
+      - name: hp condensation Temperature
+        unique_id: hp_condensation_temperature
+        unit_of_measurement: °C
+        device_class: temperature
+        state_class: measurement
+        state: >
+          {% set pressure = states('sensor.lg_therma_v_hp_high_pressure') | float(0) + 0.95 %}
+          {% if pressure > 0 %}
+            {{ (1151 / (4.537 - (log(pressure)/log(10)))) - 298.47 }}
+          {% else %}
+            unavailable
+          {% endif %}
+
   - trigger:
       - platform: state
         entity_id: binary_sensor.lg_therma_v_hp_compressor_status
@@ -1458,6 +1558,10 @@ input_boolean:
     name: "HP DHW State After Heating"
     initial: off
     icon: mdi:printer-3d-nozzle-heat-outline
+  hp_defrosting_valve_switch:
+    name: "HP Defrosting valve switch"
+    initial: off
+    icon: mdi:val
 
 sensor:
   - platform: history_stats
@@ -1768,23 +1872,6 @@ automation:
   ### DHW Solltemperatur ###
   #-------------------------------------------------------------------------------
 
-  - id: "hp_automation_set_target_temperatur_modbus_update"
-    alias: "[Heatpump] automation set target temperatur modbus update"
-    description: "Änderung der DHW Solltemperatur auf Modbus schreiben"
-    triggers:
-      - trigger: state
-        entity_id:
-          - input_number.hp_dhw_target_temperatur
-    condition: []
-    action:
-      - action: mqtt.publish
-        data:
-          topic: LG_HP_Sub
-          payload: >-
-            {% set value = states('input_number.hp_dhw_target_temperatur')| int * 10 | int(48) %}
-            {"TargetDHW":{{value}}}
-    mode: single
-
   - id: "hp_automation_set_modulation_from_mqtt_to_ha_update"
     alias: "[Heatpump] automation to sync compressor modulation to helpers"
     description: "Änderungen der Kompressormodulation werden übertragen"
@@ -1792,7 +1879,12 @@ automation:
       - trigger: state
         entity_id:
           - sensor.lg_therma_v_hp_compressor_modulation
-    condition: []
+    condition:
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: sensor.lg_therma_v_hp_compressor_modulation
+            state: "unavailable"
     action:
       # --- Logik für den Input_select Schalter ---
       - choose:
@@ -1800,18 +1892,24 @@ automation:
               - condition: template
                 value_template: "{{ trigger.to_state.state | int(999) == 0 }}"
             sequence:
+              - service: automation.turn_off
+                target:
+                  entity_id: automation.heatpump_automation_set_compressor_modulation_after_checking
               - service: input_select.select_option
                 target:
                   entity_id: input_select.hp_compressor_modulation_mode
                 data:
                   option: "freie Modulation"
+              - service: automation.turn_on
+                target:
+                  entity_id: automation.heatpump_automation_set_compressor_modulation_after_checking
+        # --- Logik für den Input_number Slider ---
         default:
           - service: input_select.select_option
             target:
               entity_id: input_select.hp_compressor_modulation_mode
             data:
               option: "Modulation begrenzt"
-      # --- Logik für den Input_number Slider ---
       - choose:
           # Bedingung 2: Wenn der Sensorwert zwischen 40 und 100 liegt
           - conditions:
@@ -1860,7 +1958,25 @@ automation:
               - service: mqtt.publish
                 data:
                   topic: "LG_HP_Sub"
-                  payload: {"CompressorModulation":0}
+                  payload: >
+                    '{"CompressorModulation":0}'
+    mode: single
+
+  - id: "hp_automation_set_target_temperatur_modbus_update"
+    alias: "[Heatpump] automation set target temperatur modbus update"
+    description: "Änderung der DHW Solltemperatur auf Modbus schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_number.hp_dhw_target_temperatur
+    condition: []
+    action:
+      - action: mqtt.publish
+        data:
+          topic: LG_HP_Sub
+          payload: >-
+            {% set value = states('input_number.hp_dhw_target_temperatur')| int * 10 | int(48) %}
+            {"TargetDHW":{{value}}}
     mode: single
 
   - id: "hp_automation_set_target_temperatur_input_slider_update"
@@ -1877,6 +1993,39 @@ automation:
           entity_id: input_number.hp_dhw_target_temperatur
         data:
           value: "{{ states('sensor.lg_therma_v_dhw_target_temp') }}"
+    mode: single
+
+  - id: "hp_automation_set_energy_consumption_limit_modbus_update"
+    alias: "[Heatpump] automation set energy consumption limit modbus update"
+    description: "Änderung des maximalen Energieverbrauch auf Modbus schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_number.hp_energy_consumption_limit
+    condition: []
+    action:
+      - action: mqtt.publish
+        data:
+          topic: LG_HP_Sub
+          payload: >-
+            {% set value = states('input_number.hp_energy_consumption_limit')| float(1) * 10 | int(48)  %}
+            {"EnergyLimit":{{value}}}
+    mode: single
+
+  - id: "hp_automation_set_energy_consumption_limit_input_slider_update"
+    alias: "[Heatpump] automation set energy consumption limit input slider"
+    description: "Änderung des maximalen Energieverbrauchs auf Input Slider schreiben"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.lg_therma_v_hp_energy_consumption_limit
+    condition: []
+    action:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.hp_energy_consumption_limit
+        data:
+          value: "{{ states('sensor.lg_therma_v_hp_energy_consumption_limit') }}"
     mode: single
 
   - id: hp_automation_set_energy_state_selection_update_to_MQTT
@@ -1927,6 +2076,7 @@ automation:
                     {% set index = trigger.to_state.state | int(0) %}
                     {{ options[index] if index < options | length else options[0] }}
     mode: single
+
   # Some helper to add some heat to the dhw heating to get better values on heat production
   - id: hp_set_dhw_after_heat_period
     alias: "[Heatpump] set DHW helper to on after dhw status switches off"
@@ -1940,6 +2090,46 @@ automation:
       - service: input_boolean.turn_on
         target:
           entity_id: input_boolean.hp_dhw_state_after_heating
+
+  - id: Heatpump_defrosting_valve_switch_automation
+    alias: "Heatpump defrosting valva switch automation"
+    description: Schaltet das 3WV für die Abtauung um. dazu muss ein Shelly hin und her geschaltet werden.
+    trigger:
+      - platform: state
+        entity_id: input_boolean.hp_defrosting_valve_switch # Ersetze dies durch die ID deines Sensors
+    action:
+      # Schritt 1: Schalte beide Schalter zuerst aus, um einen sauberen Zustand zu haben
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.shelly_pro3_abtauen_switch
+            - switch.shelly_pro3_heizen_switch
+
+      # Schritt 2: Führe eine bedingte Aktion aus (wenn... dann... sonst...)
+      - choose:
+          # Bedingung: Wenn der Binary Sensor in den Zustand 'on' gewechselt hat
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.hp_defrosting_valve_switch
+                state: "on"
+            sequence:
+              # Aktion, wenn die Bedingung wahr ist: Schalte Schalter 1 ein
+              - service: switch.turn_on
+                target:
+                  entity_id: switch.shelly_pro3_abtauen_switch
+        # Sonst: Führe diese Aktion aus
+        default:
+          # Aktion, wenn die Bedingung falsch ist: Schalte Schalter 2 ein
+          - service: switch.turn_on
+            target:
+              entity_id: switch.shelly_pro3_heizen_switch
+      - delay: "00:01:15"
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.shelly_pro3_abtauen_switch
+            - switch.shelly_pro3_heizen_switch
+    mode: restart
 
 utility_meter:
   hp_compressor_starts_heizperiode:

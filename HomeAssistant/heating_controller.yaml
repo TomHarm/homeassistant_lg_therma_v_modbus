@@ -1,0 +1,44 @@
+template:
+  - binary_sensor:
+      - name: Warmwasser PID Regler aktiv
+        unique_id: warmwasser_pid_regler_aktiv
+        state: >
+          {% set ww = states("binary_sensor.lg_therma_v_hp_dhw_heating_status") %}
+          {% set comp = states("binary_sensor.lg_therma_v_hp_compressor_status") %}
+          {% set dl = states("sensor.lg_therma_v_hp_outlet_temp") | float(0) %}
+          {{ ww == "on" and comp == "on" and dl > 40 }}
+
+sensor:
+  - platform: pid_controller
+    name: Warmwasser PID Regler
+    enabled: '{{ states("binary_sensor.warmwasser_pid_regler_aktiv") }}'
+    entity_id: sensor.lg_therma_v_hp_outlet_temp # Sensor für die Wassertemperatur
+    precision: 0
+    set_point: '{{ states("input_number.hp_dhw_max_temperatur") }}'
+    minimum: 40.0 # Untergrenze des Regelparameters
+    maximum: 100.0 # Obergrenze des Regelparameters
+    p: 5.0 # Startwert für den P-Parameter
+    i: 0.1 # Startwert für den I-Parameter
+    d: 0.05 # Startwert für den D-Parameter
+    sample_time: 30 # Abfrageintervall in Sekunden
+    windup: 15
+
+automation:
+  - id: heatpump_warmwasser_pid_steuerung
+    alias: "[Heatpump] Warmwasser PID Steuerung mit Bedingungen"
+    trigger:
+      # Die Automatisierung wird ausgelöst, wenn sich der Wert des PID-Reglers ändert.
+      - platform: state
+        entity_id: sensor.warmwasser_pid_regler
+    condition:
+      # Bedingung 1: Die Anlage muss warm sein (z.B. > 30°C am Vorlauftemperatursensor).
+      - condition: state
+        entity_id: binary_sensor.warmwasser_pid_regler_aktiv
+        state: "on"
+    action:
+      # Wenn beide Bedingungen erfüllt sind, wird der PID-Wert an die Heizung gesendet.
+      - service: input_number.set_value # Oder ein anderer Service/Script deines Heizungssystems
+        target:
+          entity_id: input_number.hp_compressor_modulation # Dein Heizungssystem-Entität
+        data:
+          value: "{{ states('sensor.warmwasser_pid_regler') | int }}"
