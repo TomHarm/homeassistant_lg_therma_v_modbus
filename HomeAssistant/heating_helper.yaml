@@ -1,10 +1,14 @@
-# ########## HA Local Solar monitoring Integration ##########
+# ########## HA Local heatpump monitoring Integration ##########
 #
 # (C) 2025 Bauer Harmes
 #
 # provide sensors for room climate and current temperature situation
 # necessary inputs:
-#
+# - a weather entity
+# - infos to power consumption and generated heat.
+# 
+# As I´ve two heat trackers in my system this is a littlebit more extended, to see the loss through my buffer tanks
+# and the real energy used for heating.
 
 # first download the weater forecast to HA Sensor
 template:

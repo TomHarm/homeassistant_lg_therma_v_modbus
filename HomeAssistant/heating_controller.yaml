@@ -1,5 +1,27 @@
+# ########## HA Local Heating controller ##########
+#
+# (C) 2025 Bauer Harmes
+#
+# provide Sensors to LG Heatpump operations
+# Depends on LG Therma V integration
+# Also needed PID from HACS
+# Average Sensor from HACS
+#
+# It relies on external tracking of energy consumption.
+# Your heatpump should be providing infos on compressor frequency
+
+
+
 template:
   - binary_sensor:
+  # verschiedene Sensoren, die als Bedingungen fuer Automationen dienen
+  # PID Regler aktiv, Start Up Phase, Grace Degree, Defrosting Setting, Backwash Operating, Return Valve Rating
+  # Brake Degree
+  # die Sensoren sind so aufgebaut, dass sie nur true melden, wenn die Bedingungen
+  # fuer die Aktivierung der jeweiligen Funktion gegeben sind.
+  # die Sensoren sind fuer Automationen und Debugging gedacht.
+      # This sensor is used to enable or disable the PID controller for domestic hot water
+      # The PID controller should only be active when the heat pump is in DHW heating mode
       - name: Warmwasser PID Regler aktiv
         unique_id: warmwasser_pid_regler_aktiv
         state: >
@@ -9,6 +31,9 @@ template:
           {% set dl = states("sensor.lg_therma_v_hp_outlet_temp") | float(0) %}
           {{ ww == "on" and comp == "on" and switch == "on" and dl > 40 }}
 
+      # Sensor to handle the Start Up Phase of the heating circuit, but this meets only if inlet control is active
+      # The idea is to push the wanted temperature higher to brake down the compressor faster and 
+      # apply modulation sooner.
       - name: Heating Startup Phase enabling
         unique_id: heating_startup_phase_enabling
         state: >
@@ -27,6 +52,8 @@ template:
             {{ control_mode == 1 and start == "off" and heat == "on" and comp == "on" and dhw == "off" and target-2 >= current }}
           {% endif %}
 
+      # Sensor to handle the disabling of the Start Up Phase, as the pump overshoots the target temperature
+      # we disable startup and so the pump thinks it has been to fast and hits the brakes with full force.
       - name: Heating Startup Phase disabling
         unique_id: heating_startup_phase_disabling
         state: >
