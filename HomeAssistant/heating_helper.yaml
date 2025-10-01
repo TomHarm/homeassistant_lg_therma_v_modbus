@@ -206,7 +206,11 @@ template:
         state_class: measurement
         icon: mdi:water-boiler
         state: >
-          {{ (states('sensor.hp_dhw_heat_energy_last_7_days')|float(0) / states('sensor.hp_dhw_consumed_energy_last_7_days')|float(0))|round(2)}}
+          {% if states('sensor.hp_dhw_consumed_energy_last_7_days')|float(0) == 0 %}
+            0
+          {% else %}
+            {{ (states('sensor.hp_dhw_heat_energy_last_7_days')|float(0) / states('sensor.hp_dhw_consumed_energy_last_7_days')|float(0))|round(2)}}
+          {% endif %}
       - name: "HP DHW AZ 30d"
         unique_id: "hp_dhw_az_30d"
         state_class: measurement
@@ -225,7 +229,7 @@ template:
         state_class: measurement
         icon: mdi:flash
         state: >
-          {{ states('sensor.shelly_3em_heizung_energy_last_7_days_wh')|float(0)/1000.0 | round(2) }}
+          {{ states('sensor.shelly_3em_heizung_energy_last_7_days_wh')|float(0) | round(2) }}
       - name: Shelly Heizung energy last 30 days
         unique_id: shelly_heizung_energy_last_30_days
         device_class: energy
@@ -233,7 +237,7 @@ template:
         state_class: measurement
         icon: mdi:flash
         state: >
-          {{ states('sensor.shelly_3em_heizung_energy_last_30_days_wh')|float(0)/1000.0 | round(2) }}
+          {{ states('sensor.shelly_3em_heizung_energy_last_30_days_wh')|float(0) | round(2) }}
 
       - name: "Durchschnittstemperatur Forecast 4h"
         unique_id: "durchschnittstemperatur_4h_berechnung"
@@ -351,17 +355,84 @@ template:
           {% else %}
             unavailable
           {% endif %}
+
       - name: "HP Heat loss production to heating last 7 days"
         unique_id: hp_heat_loss_production_to_heating_last_7_days
         unit_of_measurement: kWh
         device_class: energy
+        state_class: total
+        state: >
+          {% set prod = states('sensor.hp_generated_energy_last_7_days')|float(0) %}
+          {% set ww = states('sensor.hp_dhw_heat_energy_last_7_days')|float(0) %}
+          {% set cons = states('sensor.heating_consumed_energy_last_7_days')| float(0) %}
+          {{ prod-ww-cons }}
+      - name: "HP heating efficiency over tanks per day"
+        unique_id: hp_heating_efficiency_over_tanks_per_day
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: >
+          {% set prod = states('sensor.hp_generated_energy_daily')|float(0) %}
+          {% set ww = states('sensor.hp_dhw_heat_energy_daily')|float(0) %}
+          {% set cons = states('sensor.heating_consumed_energy_daily')| float(0) %}
+          {% if prod -ww > 0 %}
+            {{ (cons/(prod-ww)*100) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
+
+      - name: "HP heating efficiency over tanks last 7 days"
+        unique_id: hp_heating_efficiency_over_tanks_last_7_days
+        unit_of_measurement: "%"
         state_class: measurement
         state: >
           {% set prod = states('sensor.hp_generated_energy_last_7_days')|float(0) %}
-          {% set ww = states('hp_dhw_heat_energy_last_7_days')|float(0) %}
-          {% set cons = states('heating_consumed_energy_last_7_days')| float(0) %}
-          {{ prod-ww-cons }}
+          {% set ww = states('sensor.hp_dhw_heat_energy_last_7_days')|float(0) %}
+          {% set cons = states('sensor.heating_consumed_energy_last_7_days')| float(0) %}
+          {% if prod -ww > 0 %}
+            {{ (cons/(prod-ww)*100) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
+      - name: "HP heating efficiency over tanks last 30 days"
+        unique_id: hp_heating_efficiency_over_tanks_last_30_days
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: >
+          {% set prod = states('sensor.hp_generated_energy_last_30_days')|float(0) %}
+          {% set ww = states('sensor.hp_dhw_heat_energy_last_30_days')|float(0) %}
+          {% set cons = states('sensor.heating_consumed_energy_last_30_days')| float(0) %}
+          {% if prod -ww > 0 %}
+            {{ (cons/(prod-ww)*100) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
+      - name: "HP heating efficiency over tanks per month"
+        unique_id: hp_heating_efficiency_over_tanks_per_month
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: >
+          {% set prod = states('sensor.hp_generated_energy_monthly')|float(0) %}
+          {% set ww = states('sensor.hp_dhw_heat_energy_monthly')|float(0) %}
+          {% set cons = states('sensor.heating_consumed_energy_monthly')| float(0) %}
+          {% if prod -ww > 0 %}
+            {{ (cons/(prod-ww)*100) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
 
+      - name: "HP heating efficiency over tanks heating period"
+        unique_id: hp_heating_efficiency_over_tanks_heating_period
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: >
+          {% set prod = states('sensor.hp_generated_energy_heizperiode')|float(0) %}
+          {% set ww = states('sensor.hp_dhw_heat_energy_heizperiode')|float(0) %}
+          {% set cons = states('sensor.heating_consumed_energy_heizperiode')| float(0) %}
+          {% if prod -ww > 0 %}
+            {{ (cons/(prod-ww)*100) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
   # Switches for helping on the heating system
   # here first the heating circuit pump (or ext pump) this is driven by a light switch, so
   # this helper here gives us a normal switch with on/off
@@ -448,15 +519,15 @@ sensor:
   - platform: statistics
     name: "Shelly 3EM Heizung energy last 7 days Wh"
     unique_id: "shelly_3em_heizung_energy_L07d Wh"
-    entity_id: sensor.shelly_3em_heizung_tagesverbrauch
-    state_characteristic: sum
+    entity_id: sensor.shelly_pro3em_heizung_total_active_energy
+    state_characteristic: sum_differences
     max_age:
       days: 7
   - platform: statistics
     name: "Shelly 3EM Heizung energy last 30 days Wh"
     unique_id: "shelly_3em_heizung_energy_L30d Wh"
-    entity_id: sensor.shelly_3em_heizung_tagesverbrauch
-    state_characteristic: sum
+    entity_id: sensor.shelly_pro3em_heizung_total_active_energy
+    state_characteristic: sum_differences
     max_age:
       days: 30
 

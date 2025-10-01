@@ -5,8 +5,171 @@ template:
         state: >
           {% set ww = states("binary_sensor.lg_therma_v_hp_dhw_heating_status") %}
           {% set comp = states("binary_sensor.lg_therma_v_hp_compressor_status") %}
+          {% set switch = states("input_boolean.hp_pid_controller_active")%}
           {% set dl = states("sensor.lg_therma_v_hp_outlet_temp") | float(0) %}
-          {{ ww == "on" and comp == "on" and dl > 40 }}
+          {{ ww == "on" and comp == "on" and switch == "on" and dl > 40 }}
+
+      - name: Heating Startup Phase enabling
+        unique_id: heating_startup_phase_enabling
+        state: >
+          {% set heat = states('switch.lg_therma_v_hp_hauptschalter' ) %}
+          {% set comp = states('binary_sensor.lg_therma_v_hp_compressor_status') %}
+          {% set dhw = states('binary_sensor.lg_therma_v_hp_dhw_heating_status') %}
+          {% set inlet = states('sensor.lg_therma_v_hp_inlet_temp') | float %}
+          {% set outlet = states('sensor.lg_therma_v_hp_outlet_temp') | float %}
+          {% set target = states('input_number.hp_hk1_target_temperatur') | float %}
+          {% set control_mode = states('sensor.lg_therma_v_hp_control_method') | int %}
+          {% set current = (inlet if control_mode == 1 else outlet) %}
+          {% set start = states('input_boolean.hp_startup_phase_switch') %}
+          {% if control_mode == 1 %}
+            {{ start == "off" and heat == "on" and comp == "on" and dhw == "off" and target-1 >= current }}
+          {% else %}
+            {{ control_mode == 1 and start == "off" and heat == "on" and comp == "on" and dhw == "off" and target-2 >= current }}
+          {% endif %}
+
+      - name: Heating Startup Phase disabling
+        unique_id: heating_startup_phase_disabling
+        state: >
+          {% set heat = states('switch.lg_therma_v_hp_hauptschalter' ) %}
+          {% set comp = states('binary_sensor.lg_therma_v_hp_compressor_status') %}
+          {% set dhw = states('binary_sensor.lg_therma_v_hp_dhw_heating_status') %}
+          {% set inlet = states('sensor.lg_therma_v_hp_inlet_temp') | float %}
+          {% set outlet = states('sensor.lg_therma_v_hp_outlet_temp') | float %}
+          {% set target = states('sensor.lg_therma_v_hp_target_temp_circuit1') | float %}
+          {% set slider_target = states('input_number.hp_hk1_target_temperatur') | float %}
+          {% set control_mode = states('sensor.lg_therma_v_hp_control_method') | int %}
+          {% set current = (inlet if control_mode == 1 else outlet) %}
+          {% set start = states('input_boolean.hp_startup_phase_switch') %}
+          {% set target = target + (1 if target == slider_target else 0) %}
+          {% if control_mode == 1 %}
+            {{ start == "on" and heat == "on" and comp == "on" and target+0.8 <= current }}
+          {% else %}
+            {{ start == "on" and heat == "on" and comp == "on" and target+0.1 <= current }}
+          {% endif %}
+
+      - name: Heating Grace Degree enabling
+        unique_id: heating_grace_degree_enabling
+        state: >
+          {% set heat = states('switch.lg_therma_v_hp_hauptschalter' ) %}
+          {% set comp = states('binary_sensor.lg_therma_v_hp_compressor_status') %}
+          {% set dhw = states('binary_sensor.lg_therma_v_hp_dhw_heating_status') %}
+          {% set inlet = states('sensor.lg_therma_v_hp_inlet_temp') | float %}
+          {% set outlet = states('sensor.lg_therma_v_hp_outlet_temp') | float %}
+          {% set target = states('input_number.hp_hk1_target_temperatur') | float %}
+          {% set control_mode = states('sensor.lg_therma_v_hp_control_method') | int %}
+          {% set current = (inlet if control_mode == 1 else outlet) %}
+          {% set freq = states('sensor.lg_therma_v_hp_compressor_frequency') | int %}
+          {% set avg_freq = states('sensor.hp_compressor_frequency_last_20_minutes_3') | int %}
+          {% set start = states('input_boolean.hp_running_grace_degree_switch') %}
+          {{ start == "off" 
+            and heat == "on" 
+            and comp == "on" 
+            and dhw == "off" 
+            and target+2.5 < current 
+            and freq <= 20
+            and avg_freq <= 20 }}
+
+      - name: Heating Grace Degree disabling
+        unique_id: heating_grace_degree_disabling
+        state: >
+          {% set heat = states('switch.lg_therma_v_hp_hauptschalter' ) %}
+          {% set comp = states('binary_sensor.lg_therma_v_hp_compressor_status') %}
+          {% set dhw = states('binary_sensor.lg_therma_v_hp_dhw_heating_status') %}
+          {% set inlet = states('sensor.lg_therma_v_hp_inlet_temp') | float %}
+          {% set outlet = states('sensor.lg_therma_v_hp_outlet_temp') | float %}
+          {% set target = states('input_number.hp_hk1_target_temperatur') | float %}
+          {% set control_mode = states('sensor.lg_therma_v_hp_control_method') | int %}
+          {% set current = (inlet if control_mode == 1 else outlet) %}
+          {% set freq = states('sensor.lg_therma_v_hp_compressor_frequency') | int %}
+          {% set start = states('input_boolean.hp_running_grace_degree_switch') %}
+          {{ start == "on" 
+              and ( heat == "on" 
+                and comp == "on" 
+                and dhw == "off"
+                and target+0.5 > current or freq == 0 ) }}
+
+      - name: Heating Controller Brake degree enabling
+        unique_id: heating_controller_brake_degree_enabling
+        state: >
+          off
+      - name: Heating Controller Brake degree disabling
+        unique_id: heating_controller_brake_degree_disabling
+        state: >
+          off
+
+      # sensor um das Ventil fuer die Abtauung zu setzen.
+      # folgende Ereignisse sollen greifen>
+      # die Pumpe taut ab, logisch!
+      # die HK Pumpe laeuft aber die Anlage ist aus & Vorlauf und RL sind min 1 Grad auseinander
+      - name: Heating Defrosting Setting
+        unique_id: heating_defrosting_setting
+        state: >
+          {% set defrost = states('binary_sensor.lg_therma_v_hp_defrosting_status') %}
+          {% set hkpump = states('light.shelly_pro1_dimmer') %}
+          {% set heating_sw = states('switch.lg_therma_v_hp_hauptschalter') %}
+          {% set vl = states('sensor.mbusinoeth_36_7_flow_temperature') | float %}
+          {% set rl = states('sensor.mbusinoeth_36_8_return_temperature')| float %}
+          {% set df = states('sensor.hp_heating_circuit_flow_rate') | float %}
+          {% set comp = states('binary_sensor.lg_therma_v_hp_compressor_status') %}
+          {{ defrost == "on" 
+              or ( hkpump =="on" 
+                and comp == "off" 
+                and (heating_sw == "on" 
+                and 
+                  (vl > rl+1.0 and df > 5 or df < 0.3) 
+                or heating_sw == "off" )) }}
+
+      - name: Heating controller backwash operating
+        unique_id: heating_controller_backwash_operating
+        state: >
+          {% set act_freq = states('sensor.lg_therma_v_hp_compressor_frequency') | int(0) %}
+          {% set mean_freq = states('sensor.hp_compressor_frequency_last_20_minutes_3') | int(0) %}
+          {% set control_mode = states('sensor.lg_therma_v_hp_control_method') | int %}
+          {% set cur_power = states('sensor.shelly_pro3em_heizung_total_active_power') | float %}
+          {% set mean_power = states('sensor.hp_heatpump_power_last_20_minutes') |float %}
+          {% set freq_40 = states('sensor.hp_compressor_frequency_past_40_minutes') | int(0) %}
+          {% set ww = states("binary_sensor.lg_therma_v_hp_dhw_heating_status") %}
+          {{ control_mode == 0 
+              and ww == "off"
+              and( mean_power > 400 and mean_power <= 1000 and cur_power > 1400 and freq_40 >= 14 and freq_40 <= 26
+                or act_freq == 60 and mean_freq >= 15 and mean_freq <= 30 and freq_40 >= 14 and freq_40 <= 26 ) }}
+
+  - sensor:
+      - name: Heating Controller Return valve rating
+        unique_id: heating_controller_return_valve_rating
+        # steuert den RL Mischer, folgende Stati sollen erkannt werden
+        # HK Pumpe laeuft im Umlauf, dann direkt in den Speicher
+        # Die Volumenströme sind abgeglichen < 1.5l dann ebenfalls in den Speicher -> Vermeidung des Abkühlens des RL Speichers
+        # Ansonsten direkt zurück zur Pumpe
+        state: >
+          {% set hkpump = states('light.shelly_pro1_dimmer') %}
+          {% set defrost = states('binary_sensor.lg_therma_v_hp_defrosting_status') %}
+          {% set df_set = states('binary_sensor.heating_defrosting_setting') %}
+          {% set df_wp = states('sensor.lg_therma_v_hp_flow_rate')|float %}
+          {% set df_hk = states('sensor.hp_heating_circuit_flow_rate')|float %}
+          {% set out_temp = states('sensor.lg_therma_v_hp_outside_temp')|float %}
+          {% set avg_temp = states('sensor.durchschnittstemperatur_forecast_12h')|float %}
+          {% set df_delta = df_wp-df_hk %}
+          {% if hkpump == 'off' %}
+            0
+          {% elif defrost == 'off' and df_set == 'on' %}
+            1
+          {% elif df_wp > 25 and df_delta > 0 and df_delta < 1.5 and (avg_temp < 5.0 or out_temp < 5.0) %}
+            1
+          {% else %}
+            100
+          {% endif %}
+
+      - name: Heating mixer valve current value
+        unique_id: heating_mixer_valve_current_value
+        state: >
+          {% set mixer = state_attr('light.shelly_pro1_dimmer', 'brightness')|int %}
+          {% set mixer = mixer /255*100 | round(0,'ceil') %}
+          {{ mixer }}
+        unit_of_measurement: "%"
+        state_class: measurement
+        availability: >
+          {{ state_attr('light.shelly_pro1_dimmer', 'brightness') | is_number }}
 
 sensor:
   - platform: pid_controller
@@ -15,13 +178,66 @@ sensor:
     entity_id: sensor.lg_therma_v_hp_outlet_temp # Sensor für die Wassertemperatur
     precision: 0
     set_point: '{{ states("input_number.hp_dhw_max_temperatur") }}'
-    minimum: 40.0 # Untergrenze des Regelparameters
-    maximum: 100.0 # Obergrenze des Regelparameters
+    minimum: 32.0 # Untergrenze des Regelparameters
+    maximum: 80.0 # Obergrenze des Regelparameters
     p: 5.0 # Startwert für den P-Parameter
     i: 0.1 # Startwert für den I-Parameter
     d: 0.05 # Startwert für den D-Parameter
     sample_time: 30 # Abfrageintervall in Sekunden
     windup: 15
+
+  - platform: pid_controller
+    name: Warmwasser PID Regler delta T
+    enabled: '{{ states("binary_sensor.warmwasser_pid_regler_aktiv") }}'
+    entity_id: sensor.hp_aussengerat_delta_t # Sensor für die Wassertemperatur
+    precision: 1
+    set_point: 8
+    minimum: 32.0 # Untergrenze des Regelparameters
+    maximum: 80.0 # Obergrenze des Regelparameters
+    p: 5.0 # Startwert für den P-Parameter
+    i: 0.1 # Startwert für den I-Parameter
+    d: 0.05 # Startwert für den D-Parameter
+    sample_time: 30 # Abfrageintervall in Sekunden
+    windup: 5
+
+  - platform: average
+    name: "HP compressor frequency last 20 minutes"
+    unique_id: "hp_compressor_frequency_last_20_minutes"
+    entities:
+      - sensor.lg_therma_v_hp_compressor_frequency
+    end: "{{ now() - timedelta(minutes=2) }}"
+    duration:
+      minutes: 20
+  - platform: average
+    name: "HP compressor frequency past 40 minutes"
+    unique_id: "hp_compressor_frequency_past_40_minutes"
+    entities:
+      - sensor.lg_therma_v_hp_compressor_frequency
+    end: "{{ now() - timedelta(minutes=40) }}"
+    duration:
+      minutes: 1
+  - platform: average
+    name: "HP heatpump power last 20 minutes"
+    unique_id: "hp_heatpump_power_last_20_minutes"
+    entities:
+      - sensor.shelly_pro3em_heizung_total_active_power
+    end: "{{ now() - timedelta(minutes=2) }}"
+    duration:
+      minutes: 20
+
+input_boolean:
+  hp_pid_controller_active:
+    name: HP PID Controller active
+    initial: on
+    icon: mdi:controller
+  heating_controller_backwash_adjustment:
+    name: Heating Controller Backwash adjustment
+    initial: off
+    icon: mdi:thermometer-chevron-up
+  heating_controller_braking_degree:
+    name: Heating Controller Braking degree
+    initial: off
+    icon: mdi:car-brake-temperature
 
 automation:
   - id: heatpump_warmwasser_pid_steuerung
@@ -30,6 +246,8 @@ automation:
       # Die Automatisierung wird ausgelöst, wenn sich der Wert des PID-Reglers ändert.
       - platform: state
         entity_id: sensor.warmwasser_pid_regler
+      - platform: state
+        entity_id: sensor.warmwasser_pid_regler_delta_t
     condition:
       # Bedingung 1: Die Anlage muss warm sein (z.B. > 30°C am Vorlauftemperatursensor).
       - condition: state
@@ -41,4 +259,209 @@ automation:
         target:
           entity_id: input_number.hp_compressor_modulation # Dein Heizungssystem-Entität
         data:
-          value: "{{ states('sensor.warmwasser_pid_regler') | int }}"
+          value: >
+            {% set temp = states('sensor.warmwasser_pid_regler') | int %}
+            {% set delta = states('sensor.warmwasser_pid_regler_delta_t') | int %}
+            {% set value = temp if temp <= delta else delta %}
+            {{ value }}
+    mode: single
+
+  - id: heatpump_silent_mode_updating
+    alias: "[Heatpump] Silent Mode to controlling area"
+    description: Schaltet den Silent Mode um, wenn sich der binary Sensor ändert
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.hp_silent_mode_operating_area # Ersetze dies mit der ID deines Binary Sensors
+        from: "off"
+        to: "on"
+      - platform: state
+        entity_id: binary_sensor.hp_silent_mode_operating_area # Ersetze dies mit der ID deines Binary Sensors
+        from: "on"
+        to: "off"
+
+    action:
+      - service: switch.turn_{{ trigger.to_state.state }}
+        target:
+          entity_id: switch.lg_therma_v_hp_silent_mode
+    mode: single
+
+  - id: heatpump_start_up_phase_enabling
+    alias: "[Heatpump] start up phase enabling"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.heating_startup_phase_enabling
+        from: "off"
+        to: "on"
+      - platform: state
+        entity_id: binary_sensor.heating_startup_phase_disabling
+        from: "off"
+        to: "on"
+        for: "00:00:15"
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.heating_startup_phase_enabling
+                state: "on"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.hp_startup_phase_switch
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.heating_startup_phase_disabling
+                state: "on"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.hp_startup_phase_switch
+    mode: single
+
+  - id: heatpump_running_grace_degree_switching
+    alias: "[Heatpump] handle grace degree"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.heating_grace_degree_enabling
+        from: "off"
+        to: "on"
+        for: "00:00:15"
+      - platform: state
+        entity_id: binary_sensor.heating_grace_degree_disabling
+        from: "off"
+        to: "on"
+        for: "00:00:15"
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.heating_grace_degree_enabling
+                state: "on"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.hp_running_grace_degree_switch
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.heating_grace_degree_disabling
+                state: "on"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.hp_running_grace_degree_switch
+    mode: single
+
+  - id: heatpump_defrosting_switching
+    alias: "[Heatpump] triggers defrosting setting"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.heating_defrosting_setting
+        from: "on"
+        to: "off"
+      - platform: state
+        entity_id: binary_sensor.heating_defrosting_setting
+        from: "off"
+        to: "on"
+    action:
+      - service: input_boolean.turn_{{ trigger.to_state.state }}
+        target:
+          entity_id: input_boolean.hp_defrosting_valve_switch
+    mode: single
+
+  - id: heatpump_return_valve_automation
+    alias: "[Heatpump] return value automation to sensor"
+    description:
+      this automation switchs the mixer valve on change in the template sensor.
+      The automation writes to the mixer valve input_number to keep a clear flow
+      in the right direction.
+    trigger:
+      - platform: state
+        entity_id: sensor.heating_controller_return_valve_rating
+    condition:
+      - condition: state
+        entity_id: switch.hp_heizkreispumpe_schalter
+        state: "on"
+    action:
+      - delay: "00:00:05"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.hp_mischer_stellung
+        data:
+          value: "{{trigger.to_state.state|int}}"
+    mode: queued
+
+  - id: heatpump_backwash_outlet_dont_stop_automation
+    alias: "[Heatpump] backwash outlet dont stop automation"
+    description: keeps the run up, when we identify a backwash activity
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.heating_controller_backwash_operating
+        from: "off"
+        to: "on"
+        for: "00:00:12"
+      - platform: state
+        entity_id: binary_sensor.heating_controller_backwash_operating
+        from: "on"
+        to: "off"
+        for: "00:00:15"
+    action:
+      - service: input_boolean.turn_{{ trigger.to_state.state }}
+        target:
+          entity_id: input_boolean.heating_controller_backwash_adjustment
+    mode: single
+
+  - id: heatpump_apply_brake_degree_automation
+    alias: "[Heatpump] apply brake degree automation"
+    description: if the case occurs, that the HP thinks it can overshoot the temperature, this Automation is thought of as a braker, which reduces the temperature then.
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.heating_controller_brake_degree_enabling
+        from: "off"
+        to: "on"
+      - platform: state
+        entity_id: binary_sensor.heating_controller_brake_degree_disabling
+        from: "off"
+        to: "on"
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.heating_controller_brake_degree_enabling
+                state: "on"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.heating_controller_braking_degree
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.heating_controller_brake_degree_disabling
+                state: "on"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.heating_controller_braking_degree
+    mode: single
+
+  - id: heatpump_dhw_creation_modulation_setup_automation
+    alias: "[Heatpump] dhw creation modulation setup automation"
+    description: activates Modulation at dhw operation and resets it when they're done
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.lg_therma_v_hp_dhw_heating_status
+        from: "on"
+        to: "off"
+      - platform: state
+        entity_id: binary_sensor.lg_therma_v_hp_dhw_heating_status
+        from: "off"
+        to: "on"
+    action:
+      - service: mqtt.publish
+        data:
+          topic: "LG_HP_Sub"
+          payload: >
+            {% set status = trigger.to_state.state %}
+            {% set value = (60 if status == "on" else 0) | int %}
+            {"CompressorModulation":{{value}}}
+    mode: single
